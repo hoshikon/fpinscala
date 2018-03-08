@@ -51,6 +51,22 @@ object StateTest extends App with SimpleBooleanTest{
     val anotherDoubles2 = createList(rng)(RNG.doubleWithMap)
     val doubleWithMapTest = anotherDoubles.forall(d => 0 <= d && d < 1) && anotherDoubles == anotherDoubles2
     println(doubleWithMapTest + ": double with map")
+
+    val intDoublesWithMap2 = createList(rng)(RNG.map2(RNG.int, RNG.double)((_,_)))
+    val map2Test = intDoubles == intDoublesWithMap2
+    println(map2Test + ": map2")
+
+    val sequence = RNG.sequence(List(RNG.int, r => RNG.nonNegativeInt(r)))(rng)
+    val sequence2 = RNG.sequenceWithFoldRight(List(RNG.int, r => RNG.nonNegativeInt(r)))(rng)
+    val (i, rngi) = RNG.int(rng)
+    val (j, rngj) = RNG.nonNegativeInt(rngi)
+    val sequenceTest = sequence == (List(i, j), rngj)
+    val sequenceTest2 = sequence == sequence2
+    println((sequenceTest && sequenceTest2) + ": sequence")
+
+    val intsWithSequence: List[Int] = RNG.intsWithSequence(1000)(rng)._1
+    val intsWithSequenceTest = ints1 == intsWithSequence
+    println(intsWithSequenceTest + ": ints with sequence")
   }
   run
 }
