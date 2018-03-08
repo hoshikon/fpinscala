@@ -67,6 +67,10 @@ object StateTest extends App with SimpleBooleanTest{
     val intsWithSequence: List[Int] = RNG.intsWithSequence(1000)(rng)._1
     val intsWithSequenceTest = ints1 == intsWithSequence
     println(intsWithSequenceTest + ": ints with sequence")
+
+    val nonNegativeLessThan1000 = createList(rng)(RNG.nonNegativeLessThan(1000))
+    val nonNegativeLessThanTest = nonNegativeLessThan1000.forall(i => i >= 0 && i < 1000)
+    println(nonNegativeLessThanTest + ": non negative less than")
   }
   run
 }
