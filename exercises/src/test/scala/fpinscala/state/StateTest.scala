@@ -71,6 +71,13 @@ object StateTest extends App with SimpleBooleanTest{
     val nonNegativeLessThan1000 = createList(rng)(RNG.nonNegativeLessThan(1000))
     val nonNegativeLessThanTest = nonNegativeLessThan1000.forall(i => i >= 0 && i < 1000)
     println(nonNegativeLessThanTest + ": non negative less than")
+
+    val mapWithFlatMapTest = RNG.map(RNG.int)(_*2)(rng) == RNG.mapWithFlatMap(RNG.int)(_*2)(rng)
+    println(mapWithFlatMapTest + ": map with flatMap")
+
+    val intDoublesWithMap2WithFlatMap = createList(rng)(RNG.map2WithFlatMap(RNG.int, RNG.double)((_,_)))
+    val map2WithFlatMapTest = intDoublesWithMap2 == intDoublesWithMap2WithFlatMap
+    println(map2WithFlatMapTest + ": map2 with flatMap")
   }
   run
 }
