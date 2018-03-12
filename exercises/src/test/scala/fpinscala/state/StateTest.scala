@@ -93,6 +93,12 @@ object StateTest extends App with SimpleBooleanTest{
 
     val stateSeqTest = State.sequence(List(State(RNG.int), State(RNG.nonNegativeInt))).run(rng) == RNG.sequence(List(RNG.int, RNG.nonNegativeInt _))(rng)
     println(stateSeqTest + ": state sequence")
+
+    val machine = Machine(locked = true, 5, 10)
+    val inputs = List(Coin, Turn, Turn, Coin, Turn, Coin, Coin, Turn, Turn)
+    val ran = State.simulateMachine(inputs).run(machine)
+    val machineTest = ran == ((13, 2), Machine(locked = true, 2, 13))
+    println(machineTest + ": candy dispenser")
   }
   run
 }
