@@ -78,6 +78,21 @@ object StateTest extends App with SimpleBooleanTest{
     val intDoublesWithMap2WithFlatMap = createList(rng)(RNG.map2WithFlatMap(RNG.int, RNG.double)((_,_)))
     val map2WithFlatMapTest = intDoublesWithMap2 == intDoublesWithMap2WithFlatMap
     println(map2WithFlatMapTest + ": map2 with flatMap")
+
+    val stateUnittest = State.unit[RNG, Int](2).run(rng)._1 == 2
+    println(stateUnittest + ": state unit")
+
+    val stateMapTest = State(RNG.int).map(_.toString).run(rng)._1 == RNG.int(rng)._1.toString
+    println(stateMapTest + ": state map")
+
+    val stateMap2Test = State(RNG.int).map2(State(RNG.double))(_.toString + _.toString).run(rng) == RNG.map2(RNG.int, RNG.double)(_.toString + _.toString)(rng)
+    println(stateMap2Test + ": state map2")
+
+    val stateFlatMapTest = State(RNG.int).flatMap(i => State.unit(i.toDouble)).run(rng) == RNG.flatMap(RNG.int)(i => RNG.unit(i.toDouble))(rng)
+    println(stateFlatMapTest + ": state flatMap")
+
+    val stateSeqTest = State.sequence(List(State(RNG.int), State(RNG.nonNegativeInt))).run(rng) == RNG.sequence(List(RNG.int, RNG.nonNegativeInt _))(rng)
+    println(stateSeqTest + ": state sequence")
   }
   run
 }
