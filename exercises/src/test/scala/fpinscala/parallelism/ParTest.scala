@@ -57,6 +57,8 @@ object ParTest extends App with SimpleBooleanTest{
     val par1 = Par.lazyUnit{blockingAlert; 1}
     val par2 = Par.lazyUnit{blockingAlert; 2}
     val sequenceTest = Par.sequence(List(par1, par2))
+
+    val parFilterTest = Par.parFilter(List(1,2,3))(_ => {blockingAlert; true})
   }
 
   run
