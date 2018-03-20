@@ -4,7 +4,6 @@ import java.util
 import java.util.concurrent._
 
 import fpinscala.SimpleBooleanTest
-import fpinscala.parallelism.Par.Par
 
 import scala.util.Try
 
@@ -38,6 +37,8 @@ object ParTest extends App with SimpleBooleanTest{
     override def execute(command: Runnable): Unit = ???
   }
 
+  def blockingAlert = println("something is blocking")
+
   override def run: Unit = {
 
     val parA = (es: ExecutorService) => ReturnValueAtGivenMillis(1, 30)
@@ -51,7 +52,11 @@ object ParTest extends App with SimpleBooleanTest{
     }
     println((map2WithTimeoutTest && map2WithTimeoutTest2) + ": map2 with timeout")
 
-    val asyncFTest: Par[Int] = Par.asyncF((a: Int) => {println("you shouldn't be seeing this"); a*2})(2)
+    val asyncFTest = Par.asyncF((a: Int) => {blockingAlert; a*2})(2)
+
+    val par1 = Par.lazyUnit{blockingAlert; 1}
+    val par2 = Par.lazyUnit{blockingAlert; 2}
+    val sequenceTest = Par.sequence(List(par1, par2))
   }
 
   run
