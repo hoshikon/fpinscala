@@ -4,6 +4,7 @@ import fpinscala.datastructures.{ListTest, TreeTest}
 import fpinscala.errorhandling.{EitherTest, OptionTest}
 import fpinscala.gettingstarted.GettingStartedTest
 import fpinscala.laziness.StreamTest
+import fpinscala.parallelism.ParTest
 import fpinscala.state.StateTest
 
 object TestAll extends App {
@@ -14,7 +15,8 @@ object TestAll extends App {
     OptionTest,
     EitherTest,
     StreamTest,
-    StateTest
+    StateTest,
+    ParTest
   )
 
   tests.foreach(t => {
