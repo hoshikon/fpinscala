@@ -51,6 +51,10 @@ object Par {
 
   def sortPar(parList: Par[List[Int]]) = map(parList)(_.sorted)
 
+  //I really don't see the point in parallelising this like the answer does because each computations are too cheap. I will go with a sequential solution
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] =
+    ps.foldRight(Par.unit(List.empty[A]))(Par.map2(_, _)(_ :: _))
+
   def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean = 
     p(e).get == p2(e).get
 
