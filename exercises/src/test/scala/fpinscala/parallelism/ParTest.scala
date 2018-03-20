@@ -51,6 +51,7 @@ object ParTest extends App with SimpleBooleanTest{
     }
     println((map2WithTimeoutTest && map2WithTimeoutTest2) + ": map2 with timeout")
 
+    val asyncFTest: Par[Int] = Par.asyncF((a: Int) => {println("you shouldn't be seeing this"); a*2})(2)
   }
 
   run

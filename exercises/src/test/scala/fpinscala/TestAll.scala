@@ -28,7 +28,7 @@ object TestAll extends App {
 trait SimpleBooleanTest {
   def run: Unit
   def println(s: String) = {
-    val colour = if (s.startsWith("true")) Console.GREEN else Console.RED
+    val colour = if (s.startsWith("true")) Console.GREEN else if (s.startsWith("false")) Console.RED else Console.YELLOW
     Predef.println(colour + s + Console.RESET)
   }
 }
