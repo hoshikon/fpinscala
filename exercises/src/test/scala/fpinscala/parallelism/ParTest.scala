@@ -21,23 +21,7 @@ object ParTest extends App with SimpleBooleanTest{
       }
   }
 
-  val es = new ExecutorService {
-    override def submit[T](task: Callable[T]): Future[T] = ???
-    override def submit[T](task: Runnable, result: T): Future[T] = ???
-    override def submit(task: Runnable): Future[_] = ???
-    override def isTerminated: Boolean = ???
-    override def invokeAll[T](tasks: util.Collection[_ <: Callable[T]]): util.List[Future[T]] = ???
-    override def invokeAll[T](tasks: util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit): util.List[Future[T]] = ???
-    override def awaitTermination(timeout: Long, unit: TimeUnit): Boolean = ???
-    override def shutdownNow(): util.List[Runnable] = ???
-    override def invokeAny[T](tasks: util.Collection[_ <: Callable[T]]): T = ???
-    override def invokeAny[T](tasks: util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit): T = ???
-    override def shutdown(): Unit = ???
-    override def isShutdown: Boolean = ???
-    override def execute(command: Runnable): Unit = ???
-  }
-
-  def blockingAlert = println("something is blocking")
+  val es = Executors.newSingleThreadExecutor()
 
   override def run: Unit = {
 
@@ -52,14 +36,18 @@ object ParTest extends App with SimpleBooleanTest{
     }
     println((map2WithTimeoutTest && map2WithTimeoutTest2) + ": map2 with timeout")
 
-    val asyncFTest = Par.asyncF((a: Int) => {blockingAlert; a*2})(2)
+    val asyncFTest = Par.asyncF((a: Int) => a*2)(2)(es).get == 4
+    println(asyncFTest + ": asyncF")
 
-    val par1 = Par.lazyUnit{blockingAlert; 1}
-    val par2 = Par.lazyUnit{blockingAlert; 2}
-    val sequenceTest = Par.sequence(List(par1, par2))
+    val par1 = Par.lazyUnit(1)
+    val par2 = Par.lazyUnit(2)
+    val sequenceTest = Par.sequence(List(par1, par2))(es).get == List(1,2)
+    println(sequenceTest + ": sequence")
 
-    val parFilterTest = Par.parFilter(List(1,2,3))(_ => {blockingAlert; true})
+    val parFilterTest = Par.parFilter(List(1,2,3))(_ => true)(es).get == List(1,2,3)
+    println(parFilterTest + ": parFilter")
   }
 
   run
+  es.shutdown()
 }
