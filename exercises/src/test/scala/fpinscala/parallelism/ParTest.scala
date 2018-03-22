@@ -61,7 +61,7 @@ object ParTest extends App with SimpleBooleanTest{
 //        else Par.lazyUnit(0)
 //      }
 //
-//      recursiveCall(100)(es).get
+//      recursiveCall(n)(fixedThreadPool).get
 //      fixedThreadPool.shutdown()
 //    }
 //
