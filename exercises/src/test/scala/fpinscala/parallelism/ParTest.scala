@@ -1,9 +1,9 @@
 package fpinscala.parallelism
 
-import java.util
 import java.util.concurrent._
 
 import fpinscala.SimpleBooleanTest
+import fpinscala.parallelism.Par.Par
 
 import scala.util.Try
 
@@ -44,8 +44,31 @@ object ParTest extends App with SimpleBooleanTest{
     val sequenceTest = Par.sequence(List(par1, par2))(es).get == List(1,2)
     println(sequenceTest + ": sequence")
 
-    val parFilterTest = Par.parFilter(List(1,2,3))(_ => true)(es).get == List(1,2,3)
+    val parFilterTest = Par.parFilter(List(1,2,3,4,5,6,7))(_ => true)(es).get == List(1,2,3,4,5,6,7)
     println(parFilterTest + ": parFilter")
+
+//===This will trigger deadlock===
+//    val a = Par.lazyUnit(42 + 1)
+//    val S = Executors.newFixedThreadPool(1)
+//    println(Par.equal(S)(a, Par.fork(a)) + "")
+
+//===any fixed-size thread pool can be made to deadlock given this implementation of fork===
+//    def triggerDeadLock(n: Int): Unit = {
+//      val fixedThreadPool = Executors.newFixedThreadPool(n)
+//
+//      def recursiveCall(n: Int): Par[Int] = {
+//        if (n > 0) Par.fork { recursiveCall(n-1) }
+//        else Par.lazyUnit(0)
+//      }
+//
+//      recursiveCall(100)(es).get
+//      fixedThreadPool.shutdown()
+//    }
+//
+//    triggerDeadLock(20)
+
+
+
   }
 
   run
