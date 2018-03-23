@@ -22,6 +22,24 @@ object Nonblocking {
       ref.get // Once we've passed the latch, we know `ref` has been set, and return its value
     }
 
+    def runButCatchError[A](es: ExecutorService)(p: Par[A]): A = {
+      val ref = new java.util.concurrent.atomic.AtomicReference[Either[Throwable, A]]
+      val latch = new CountDownLatch(1)
+      try {
+        p(es) {a => ref.set(Right(a)); latch.countDown }
+      } catch {
+        case t: Throwable => {
+          ref.set(Left(t))
+          latch.countDown
+        }
+      }
+      latch.await
+      ref.get match {
+        case Right(a) => a
+        case Left(t) => throw t
+      }
+    }
+
     def unit[A](a: A): Par[A] =
       es => new Future[A] {
         def apply(cb: A => Unit): Unit =
