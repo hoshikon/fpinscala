@@ -67,7 +67,12 @@ object ParTest extends App with SimpleBooleanTest{
 //
 //    triggerDeadLock(20)
 
+    val choices = List(Par.unit("a"), Par.unit("b"), Par.unit("c"))
+    val choiceNTest = Par.choiceN(Par.unit(1))(choices)(es).get == "b"
+    println(choiceNTest + ": choiceN")
 
+    val choiceWithChoiceNTest = Par.choiceWithChoiceN(Par.unit(false))(Par.unit("true"), Par.unit("false"))(es).get == "false"
+    println(choiceWithChoiceNTest + ": choice with choiceN")
 
   }
 
