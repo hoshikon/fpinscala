@@ -84,6 +84,17 @@ object Par {
   def choiceWithChoiceN[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
     choiceN(Par.map(cond)(c => if (c) 0 else 1))(List(t, f))
 
+  def choiceGeneral[A, B](a: Par[A])(f: A => Par[B]): Par[B] = es => run(es)(f(run(es)(a).get))
+
+  def choiceWithGeneral[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    choiceGeneral(cond){ bool => es => if (bool) t(es) else f(es) }
+
+  def choiceNWithGeneral[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    choiceGeneral(n){ n => run(_)(choices(n)) }
+
+  def choiceMap[K,V](key: Par[K])(choices: Map[K,Par[V]]): Par[V] =
+    choiceGeneral(key){ key => run(_)(choices(key)) }
+
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 

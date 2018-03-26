@@ -3,7 +3,6 @@ package fpinscala.parallelism
 import java.util.concurrent._
 
 import fpinscala.SimpleBooleanTest
-import fpinscala.parallelism.Par.Par
 
 import scala.util.Try
 
@@ -73,6 +72,15 @@ object ParTest extends App with SimpleBooleanTest{
 
     val choiceWithChoiceNTest = Par.choiceWithChoiceN(Par.unit(false))(Par.unit("true"), Par.unit("false"))(es).get == "false"
     println(choiceWithChoiceNTest + ": choice with choiceN")
+
+
+    val choicesMap = Map("one" -> Par.unit(1), "two" -> Par.unit(2), "three" -> Par.unit(3))
+    val choiceWithGeneralTest = Par.choiceWithGeneral(Par.unit(true))(Par.unit("true"), Par.unit("false"))(es).get == "true"
+    val choiceNWithGeneralTest = Par.choiceNWithGeneral(Par.unit(1))(choices)(es).get == "b"
+    val choiceMapTest = Par.choiceMap(Par.unit("two"))(choicesMap)(es).get == 2
+    val choiceGeneralTest = choiceWithGeneralTest && choiceNWithGeneralTest && choiceMapTest
+
+    println(choiceGeneralTest + ": more general choice")
 
   }
 
