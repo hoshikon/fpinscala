@@ -82,6 +82,15 @@ object ParTest extends App with SimpleBooleanTest{
 
     println(choiceGeneralTest + ": more general choice")
 
+    val joinTest = Par.join(Par.unit(Par.unit("x")))(es).get == "x"
+    println(joinTest + ": join")
+
+    val flatMapWithJoinTest = Par.flatMapWithJoin(Par.unit("1"))(x => Par.unit(x.toInt))(es).get == 1
+    println(flatMapWithJoinTest + ": flatMap with join")
+
+    val joinWithFlatMapTest = Par.joinWithFlatMap(Par.unit(Par.unit("1")))(es).get == "1"
+    println(joinWithFlatMapTest + ": join with flatMap")
+
   }
 
   run
