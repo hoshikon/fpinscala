@@ -6,6 +6,7 @@ import fpinscala.gettingstarted.GettingStartedTest
 import fpinscala.laziness.StreamTest
 import fpinscala.parallelism.ParTest
 import fpinscala.state.StateTest
+import fpinscala.testing.GenTest
 
 object TestAll extends App {
   val tests: List[SimpleBooleanTest] = List(
@@ -16,7 +17,8 @@ object TestAll extends App {
     EitherTest,
     StreamTest,
     StateTest,
-    ParTest
+    ParTest,
+    GenTest
   )
 
   tests.foreach(t => {
