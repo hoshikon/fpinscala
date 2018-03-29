@@ -20,9 +20,9 @@ object ParTest extends App with SimpleBooleanTest{
       }
   }
 
-  val es = Executors.newSingleThreadExecutor()
-
   override def run: Unit = {
+
+    val es = Executors.newFixedThreadPool(10)
 
     val parA = (es: ExecutorService) => ReturnValueAtGivenMillis(1, 30)
     val parB = (es: ExecutorService) => ReturnValueAtGivenMillis(2, 30)
@@ -91,8 +91,8 @@ object ParTest extends App with SimpleBooleanTest{
     val joinWithFlatMapTest = Par.joinWithFlatMap(Par.unit(Par.unit("1")))(es).get == "1"
     println(joinWithFlatMapTest + ": join with flatMap")
 
+    es.shutdown()
   }
 
   run
-  es.shutdown()
 }

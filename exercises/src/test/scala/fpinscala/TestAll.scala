@@ -4,7 +4,7 @@ import fpinscala.datastructures.{ListTest, TreeTest}
 import fpinscala.errorhandling.{EitherTest, OptionTest}
 import fpinscala.gettingstarted.GettingStartedTest
 import fpinscala.laziness.StreamTest
-import fpinscala.parallelism.ParTest
+import fpinscala.parallelism.{NonblockingTest, ParTest}
 import fpinscala.state.StateTest
 import fpinscala.testing.GenTest
 
@@ -18,6 +18,7 @@ object TestAll extends App {
     StreamTest,
     StateTest,
     ParTest,
+    NonblockingTest,
     GenTest
   )
 
