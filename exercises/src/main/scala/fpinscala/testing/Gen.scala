@@ -14,16 +14,21 @@ shell, which you can fill in and modify while working through the chapter.
 */
 
 trait Prop {
-  def check: Boolean
-  def &&(p: Prop): Prop = {
-    def thisCheck = check
-    new Prop {
-      override def check: Boolean = thisCheck && p.check
-    }
-  }
+//  def checkBool: Boolean
+//  def &&(p: Prop): Prop = {
+//    def thisCheck = checkBool
+//    new Prop {
+//      override def checkBool: Boolean = thisCheck && p.checkBool
+//    }
+//  }
+
+  def check: Either[(FailedCase, SuccessCount), SuccessCount]
+
 }
 
 object Prop {
+  type FailedCase = String
+  type SuccessCount = Int
   def forAll[A](gen: Gen[A])(f: A => Boolean): Prop = ???
 }
 
