@@ -32,7 +32,9 @@ object Prop {
   def forAll[A](gen: Gen[A])(f: A => Boolean): Prop = ???
 }
 
-case class Gen[A](sample: State[RNG,A])
+case class Gen[A](sample: State[RNG,A]) {
+  def value(implicit rng: RNG) = sample.run(rng)._1
+}
 
 object Gen {
   def unit[A](a: => A): Gen[A] = Gen(State(RNG.unit(a)))
