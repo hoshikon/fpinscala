@@ -51,6 +51,15 @@ object Gen {
     Gen(state)
     //Gen(State.sequence(List.fill(n)(g.sample))) //from answer
   }
+
+  def int: Gen[Int] = Gen(State(RNG.int))
+  def intTuple: Gen[(Int, Int)] = Gen(State(RNG.map2(RNG.int, RNG.int)((_, _))))
+  def toOption[A](g: Gen[A]): Gen[Option[A]] = g.copy(sample = g.sample.map(Some(_)))
+  def fromOption[A](g: Gen[Option[A]]) = g.copy(sample = g.sample.map(_.get)) //This is not useful because it cannot handle None...
+  def string(length: Int): Gen[String] = {
+    val genIntList: Gen[List[Int]] = Gen.listOfN(length, Gen.int)
+    genIntList.copy(sample = genIntList.sample.map(_.map(_.toChar).mkString))
+  }
 }
 
 //trait Gen[A] {
