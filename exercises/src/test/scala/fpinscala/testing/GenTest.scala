@@ -61,6 +61,9 @@ object GenTest extends App with SimpleBooleanTest {
 
     val listOfGenNTest = Gen.unit(1).listOfN(Gen.unit(3)).value == List(1, 1, 1)
     println(listOfGenNTest + ": list of n with Gen[Int]")
+
+    val unions = Gen.listOfN(10, Gen.union(Gen.unit(1), Gen.unit(2))).value
+    println(true + ": union | output => " + unions)
   }
 
   run

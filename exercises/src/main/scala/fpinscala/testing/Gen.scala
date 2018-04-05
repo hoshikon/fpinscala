@@ -43,7 +43,7 @@ object Gen {
   def choose(start: Int, stopExclusive: Int): Gen[Int] =
     Gen(State(RNG.nonNegativeLessThan(stopExclusive - start)).map(_ + start))
 
-  def boolean: Gen[Boolean] = Gen(State(RNG.int).map(_ >= 0))
+  def boolean: Gen[Boolean] = Gen(State(RNG.int).map(_ % 2 == 0))
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = Gen(State.sequence(List.fill(n)(g.sample)))
 //  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = {
 //    val state = State((rng: RNG) => {
@@ -64,6 +64,8 @@ object Gen {
     val genIntList: Gen[List[Int]] = Gen.listOfN(length, Gen.int)
     genIntList.copy(sample = genIntList.sample.map(_.map(_.toChar).mkString))
   }
+
+  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = boolean.flatMap(if(_) g1 else g2)
 }
 
 //trait Gen[A] {
