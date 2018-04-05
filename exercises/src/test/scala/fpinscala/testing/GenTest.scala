@@ -64,6 +64,13 @@ object GenTest extends App with SimpleBooleanTest {
 
     val unions = Gen.listOfN(10, Gen.union(Gen.unit(1), Gen.unit(2))).value
     println(true + ": union | output => " + unions)
+
+    val weighteds = Gen.listOfN(100, Gen.weighted((Gen.unit(true), 0.1),(Gen.unit(false), 0.9))).value
+    val (shouldBe10Percent, shouldBe90Percent) = {
+      val map = weighteds.groupBy(identity)
+      (map(true).length, map(false).length)
+    }
+    println(true + ": weighted | output => " + shouldBe10Percent + ":" + shouldBe90Percent)
   }
 
   run
