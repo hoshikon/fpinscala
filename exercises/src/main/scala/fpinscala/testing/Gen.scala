@@ -34,6 +34,8 @@ object Prop {
 
 case class Gen[A](sample: State[RNG,A]) {
   def value(implicit rng: RNG) = sample.run(rng)._1
+  def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(sample.flatMap(a => f(a).sample))
+  def listOfN(size: Gen[Int]): Gen[List[A]] = size.flatMap(n => Gen.listOfN(n, this))
 }
 
 object Gen {
@@ -42,17 +44,17 @@ object Gen {
     Gen(State(RNG.nonNegativeLessThan(stopExclusive - start)).map(_ + start))
 
   def boolean: Gen[Boolean] = Gen(State(RNG.int).map(_ >= 0))
-  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = {
-    val state = State((rng: RNG) => {
-      (0 to n).foldLeft((List.empty[A], rng))((acc, _) => {
-        val (list, r) = acc
-        val (x, r2) = g.sample.run(r)
-        (x :: list, r2)
-      })
-    })
-    Gen(state)
-    //Gen(State.sequence(List.fill(n)(g.sample))) //from answer
-  }
+  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = Gen(State.sequence(List.fill(n)(g.sample)))
+//  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = {
+//    val state = State((rng: RNG) => {
+//      (0 to n).foldLeft((List.empty[A], rng))((acc, _) => {
+//        val (list, r) = acc
+//        val (x, r2) = g.sample.run(r)
+//        (x :: list, r2)
+//      })
+//    })
+//    Gen(state)
+//  }
 
   def int: Gen[Int] = Gen(State(RNG.int))
   def intTuple: Gen[(Int, Int)] = Gen(State(RNG.map2(RNG.int, RNG.int)((_, _))))

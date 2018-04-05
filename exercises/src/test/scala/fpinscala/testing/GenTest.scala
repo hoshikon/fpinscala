@@ -55,6 +55,12 @@ object GenTest extends App with SimpleBooleanTest {
 
     val strings = Gen.listOfN(10, Gen.string(3)).value
     println(true + ": string | output => " + strings)
+
+    val flatMapTest = Gen.unit(3).flatMap(n => Gen.unit(n * n)).value == 9
+    println(flatMapTest + ": flatMap")
+
+    val listOfGenNTest = Gen.unit(1).listOfN(Gen.unit(3)).value == List(1, 1, 1)
+    println(listOfGenNTest + ": list of n with Gen[Int]")
   }
 
   run
