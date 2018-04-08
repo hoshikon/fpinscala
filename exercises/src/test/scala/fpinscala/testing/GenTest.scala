@@ -70,7 +70,16 @@ object GenTest extends App with SimpleBooleanTest {
       val map = weighteds.groupBy(identity)
       (map(true).length, map(false).length)
     }
-    println(true + ": weighted | output => " + shouldBe10Percent + ":" + shouldBe90Percent)
+    println(true + ": weighted | output => " + shouldBe10Percent + ":" + shouldBe90Percent + " (this should be around 1:9)")
+
+    val trues = PropWithTag.forAllWithTag("trues", Gen.unit(true))(identity)
+    val falses = PropWithTag.forAllWithTag("falses", Gen.unit(false))(identity)
+    val ands = trues && falses
+    val ors = falses || trues
+    val andTest = ands.run(3, rng) == FalsifiedWithTag("falses", "false", 0)
+    println(andTest + ": &&")
+    val orTest = ors.run(3, rng) == Passed
+    println(orTest + ": ||")
   }
 
   run

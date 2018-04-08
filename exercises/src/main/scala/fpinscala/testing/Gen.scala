@@ -26,7 +26,46 @@ shell, which you can fill in and modify while working through the chapter.
 //
 //}
 
-case class Prop(run: (TestCases, RNG) => Result)
+case class Prop(run: (TestCases, RNG) => Result) {
+  def &&(p: Prop): Prop = Prop((testCases, rng) => {
+    this.run(testCases, rng) match {
+      case Passed => p.run(testCases, rng)
+      case f => f
+    }
+  })
+
+  def ||(p: Prop): Prop = Prop((testCases, rng) => {
+    this.run(testCases, rng) match {
+      case Falsified(msg,_) => p.tag(msg).run(testCases, rng)
+      case p => p
+    }
+  })
+
+  def tag(msg: String) = Prop {
+    (n,rng) => run(n,rng) match {
+      case Falsified(e, c) => Falsified(msg + "\n" + e, c)
+      case x => x
+    }
+  }
+}
+
+case class PropWithTag(run: (TestCases, RNG) => Result) {
+    def &&(p: PropWithTag): PropWithTag = PropWithTag((testCases, rng) => {
+      this.run(testCases, rng) match {
+        case f@FalsifiedWithTag(_, _, _) => f
+        case _ => p.run(testCases, rng)
+      }
+    })
+
+    def ||(p: PropWithTag): PropWithTag = PropWithTag((testCases, rng) => {
+      this.run(testCases, rng) match {
+        case p@Passed => p
+        case f1@FalsifiedWithTag(_, _, s) => p.run(testCases, rng) match {
+          case p@Passed => p
+          case f2@FalsifiedWithTag(_, _, s2) => if (s <= s2) f1 else f2 // returns info of the first failure
+        }}
+    })
+}
 
 object Prop {
   type FailedCase = String
@@ -46,6 +85,25 @@ object Prop {
       s"generated an exception: ${e.getMessage}\n" + s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
 }
 
+object PropWithTag {
+  type FailedCase = String
+  type SuccessCount = Int
+  type TestCases = Int
+
+  def forAllWithTag[A](tag: String, as: Gen[A])(f: A => Boolean): PropWithTag = PropWithTag {
+    (n, rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+      case (a, i) => try {
+        if (f(a)) Passed else FalsifiedWithTag(tag, a.toString, i)
+      } catch { case e: Exception => FalsifiedWithTag(tag, buildMsg(a, e), i) }
+    }.find(_.isFalsified).getOrElse(Passed)
+  }
+
+  def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+  def buildMsg[A](s: A, e: Exception): String =
+    s"test case: $s\n" +
+      s"generated an exception: ${e.getMessage}\n" + s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
+}
+
 sealed trait Result {
   def isFalsified: Boolean
 }
@@ -54,6 +112,9 @@ case object Passed extends Result {
   def isFalsified = false
 }
 case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
+  def isFalsified = true
+}
+case class FalsifiedWithTag(tag: String = "", failure: FailedCase, successes: SuccessCount) extends Result {
   def isFalsified = true
 }
 

@@ -87,7 +87,7 @@ trait Stream[+A] {
   }
 
   def zip[B](s2: Stream[B]): Stream[(A, B)] =
-    zipAll(s2).takeWhileWithUnfold(s => s._1.isDefined && s._2.isDefined).map(s => (s._1.get, s._2.get))
+    zipAll(s2).takeWhileWithFoldRight(s => s._1.isDefined && s._2.isDefined).map(s => (s._1.get, s._2.get))
 
   def tails: Stream[Stream[A]] = unfold(this){
       case s@Cons(_,t) => Some((s, t()))
