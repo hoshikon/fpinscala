@@ -80,6 +80,9 @@ object GenTest extends App with SimpleBooleanTest {
     println(andTest + ": &&")
     val orTest = ors.run(3, rng) == Passed
     println(orTest + ": ||")
+
+    val listOfTest = SGen.listOf(Gen.unit(1)).forSize(3).value == List(1,1,1)
+    println(listOfTest + ": SGen.listOf")
   }
 
   run

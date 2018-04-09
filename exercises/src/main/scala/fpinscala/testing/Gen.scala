@@ -26,23 +26,23 @@ shell, which you can fill in and modify while working through the chapter.
 //
 //}
 
-case class Prop(run: (TestCases, RNG) => Result) {
-  def &&(p: Prop): Prop = Prop((testCases, rng) => {
-    this.run(testCases, rng) match {
-      case Passed => p.run(testCases, rng)
+case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
+  def &&(p: Prop): Prop = Prop((maxSize, testCases, rng) => {
+    this.run(maxSize, testCases, rng) match {
+      case Passed => p.run(maxSize, testCases, rng)
       case f => f
     }
   })
 
-  def ||(p: Prop): Prop = Prop((testCases, rng) => {
-    this.run(testCases, rng) match {
-      case Falsified(msg,_) => p.tag(msg).run(testCases, rng)
+  def ||(p: Prop): Prop = Prop((maxSize, testCases, rng) => {
+    this.run(maxSize, testCases, rng) match {
+      case Falsified(msg,_) => p.tag(msg).run(maxSize, testCases, rng)
       case p => p
     }
   })
 
   def tag(msg: String) = Prop {
-    (n,rng) => run(n,rng) match {
+    (maxSize, n,rng) => run(maxSize, n,rng) match {
       case Falsified(e, c) => Falsified(msg + "\n" + e, c)
       case x => x
     }
@@ -71,18 +71,38 @@ object Prop {
   type FailedCase = String
   type SuccessCount = Int
   type TestCases = Int
+  type MaxSize = Int
+
+  def forAll[A](g: SGen[A])(f: A => Boolean): Prop = forAll(g.forSize)(f)
+
+  def forAll[A](g: Int => Gen[A])(f: A => Boolean): Prop = Prop {
+    (max, n, rng) =>
+      val casesPerSize = (n + (max - 1)) / max
+      val props: Stream[Prop] = Stream.from(0).take((n min max) + 1).map(i => forAll(g(i))(f))
+      val prop: Prop =
+        props.map(p => Prop { (max, _, rng) =>
+          p.run(max, casesPerSize, rng)
+        }).toList.reduce(_ && _)
+      prop.run(max, n, rng)
+  }
+
   def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
-    (n, rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
-      case (a, i) => try {
-        if (f(a)) Passed else Falsified(a.toString, i)
-      } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
-    }.find(_.isFalsified).getOrElse(Passed)
+    (_, n, rng) =>
+      randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+        case (a, i) => try {
+          if (f(a)) Passed else Falsified(a.toString, i)
+        } catch {
+          case e: Exception => Falsified(buildMsg(a, e), i)
+        }
+      }.find(_.isFalsified).getOrElse(Passed)
   }
 
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+
   def buildMsg[A](s: A, e: Exception): String =
     s"test case: $s\n" +
       s"generated an exception: ${e.getMessage}\n" + s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
+
 }
 
 object PropWithTag {
@@ -118,10 +138,13 @@ case class FalsifiedWithTag(tag: String = "", failure: FailedCase, successes: Su
   def isFalsified = true
 }
 
-case class Gen[A](sample: State[RNG,A]) {
-  def value(implicit rng: RNG) = sample.run(rng)._1
+case class Gen[+A](sample: State[RNG,A]) {
+  def value(implicit rng: RNG): A = sample.run(rng)._1
+  def map[B](f: A => B) = Gen(sample.map(f))
   def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(sample.flatMap(a => f(a).sample))
   def listOfN(size: Gen[Int]): Gen[List[A]] = size.flatMap(n => Gen.listOfN(n, this))
+
+  def unsized: SGen[A] = SGen(_ => this)
 }
 
 object Gen {
@@ -161,7 +184,28 @@ object Gen {
 //  def flatMap[A,B](f: A => Gen[B]): Gen[B] = ???
 //}
 
-trait SGen[+A] {
-
+case class SGen[+A](forSize: Int => Gen[A]) {
+  def map[B](f: A => B): SGen[B] = SGen(n => forSize(n).map(f))
+  def flatMap[B](f: A => SGen[B]): SGen[B] = SGen(n => forSize(n).flatMap(a => f(a).forSize(n)))
 }
+
+object SGen {
+  def unit[A](a: => A): SGen[A] = Gen.unit(a).unsized
+  def choose(start: Int, stopExclusive: Int): SGen[Int] = Gen.choose(start, stopExclusive).unsized
+
+  def boolean: SGen[Boolean] = Gen.boolean.unsized
+  def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(Gen.listOfN(_, g))
+
+  def int: SGen[Int] = Gen.int.unsized
+  def intTuple: SGen[(Int, Int)] = Gen.intTuple.unsized
+  def string(length: Int): SGen[String] = Gen.string(length).unsized
+
+  def union[A](g1: SGen[A], g2: SGen[A]): SGen[A] = boolean.flatMap(if(_) g1 else g2)
+  def weighted[A](g1: (SGen[A], Double), g2: (SGen[A], Double)): SGen[A] =
+    Gen(State(RNG.double)).unsized.flatMap(d => if (d < (g1._2/(g1._2 + g2._2))) g1._1 else g2._1)
+}
+
+//trait SGen[+A] {
+//
+//}
 
