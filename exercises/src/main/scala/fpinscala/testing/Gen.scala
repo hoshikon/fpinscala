@@ -103,6 +103,12 @@ object Prop {
     s"test case: $s\n" +
       s"generated an exception: ${e.getMessage}\n" + s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
 
+  def run(p: Prop, maxSize: Int = 100, testCases: Int = 100, rng: RNG = RNG.Simple(System.currentTimeMillis)): Unit =
+    p.run(maxSize, testCases, rng) match {
+      case Falsified(msg, n) => println(s"! Falsified after $n passed tests:\n $msg")
+      case Passed => println(s"+ OK, passed $testCases tests.")
+    }
+
 }
 
 object PropWithTag {
@@ -195,6 +201,7 @@ object SGen {
 
   def boolean: SGen[Boolean] = Gen.boolean.unsized
   def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(Gen.listOfN(_, g))
+  def listOf1[A](g: Gen[A]): SGen[List[A]] = SGen(_ => Gen.listOfN(1, g))
 
   def int: SGen[Int] = Gen.int.unsized
   def intTuple: SGen[(Int, Int)] = Gen.intTuple.unsized

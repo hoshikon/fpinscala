@@ -83,6 +83,26 @@ object GenTest extends App with SimpleBooleanTest {
 
     val listOfTest = SGen.listOf(Gen.unit(1)).forSize(3).value == List(1,1,1)
     println(listOfTest + ": SGen.listOf")
+
+    val smallInt = Gen.choose(-10,10)
+
+    val maxProp = Prop.forAll {
+      SGen.listOf1(smallInt).flatMap(list => SGen.listOf(smallInt).map(list ++ _))
+    } { ns =>
+      val max = ns.max
+      !ns.exists(_ > max)
+    }
+    Prop.run(maxProp, rng = rng)
+
+    val sortProp = Prop.forAll(SGen.listOf(smallInt)) {
+      ns =>
+        val sorted = ns.sorted
+        sorted.foldLeft((Int.MinValue, true))((acc, n) => {
+          (n, acc._2 && (n >= acc._1))
+        })._2
+    }
+
+    Prop.run(sortProp, rng = rng)
   }
 
   run
