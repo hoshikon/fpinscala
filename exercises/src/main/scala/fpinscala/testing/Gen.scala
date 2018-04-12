@@ -29,7 +29,7 @@ shell, which you can fill in and modify while working through the chapter.
 case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
   def &&(p: Prop): Prop = Prop((maxSize, testCases, rng) => {
     this.run(maxSize, testCases, rng) match {
-      case Passed => p.run(maxSize, testCases, rng)
+      case Passed|Proved => p.run(maxSize, testCases, rng)
       case f => f
     }
   })
@@ -107,7 +107,11 @@ object Prop {
     p.run(maxSize, testCases, rng) match {
       case Falsified(msg, n) => println(s"! Falsified after $n passed tests:\n $msg")
       case Passed => println(s"+ OK, passed $testCases tests.")
+      case Proved => println(s"+ OK, proved property.")
     }
+
+  def check(p: => Boolean): Prop = Prop { (_, _, _) => if (p) Passed else Falsified("()", 0)
+  }
 
 }
 
@@ -137,6 +141,10 @@ sealed trait Result {
 case object Passed extends Result {
   def isFalsified = false
 }
+case object Proved extends Result {
+  def isFalsified: Boolean = false
+}
+
 case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
   def isFalsified = true
 }
