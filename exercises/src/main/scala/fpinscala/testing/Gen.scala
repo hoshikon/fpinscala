@@ -97,6 +97,34 @@ object Prop {
       }.find(_.isFalsified).getOrElse(Passed)
   }
 
+//Stores all historical results and reuse them if re-requested
+//  def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
+//    (_, n, rng) =>
+//      val results = mutable.Set[A]()
+//      randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+//        case (a, i) => try {
+//          if (results.contains(a) || f(a)) {
+//            results.add(a)
+//            Passed
+//          } else Falsified(a.toString, i)
+//        } catch {
+//          case e: Exception => Falsified(buildMsg(a, e), i)
+//        }
+//      }.find(_.isFalsified).getOrElse(Passed)
+//  }
+
+  private val fixedThreadPools: Map[Int, ExecutorService] = (1 to 4).map(n => n -> Executors.newFixedThreadPool(n)).toMap
+  private val cachedThreadPool: ExecutorService = Executors.newCachedThreadPool
+
+  def shutdownAllPools = (cachedThreadPool :: fixedThreadPools.values.toList).foreach(_.shutdown())
+
+  val S: Gen[ExecutorService] = weighted(
+    choose(1,4).map(fixedThreadPools) -> .75,
+    unit(cachedThreadPool) -> .25)
+
+  def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop = forAll(S ** g) { case s ** a => f(a)(s).get }
+  def forAllPar[A](g: SGen[A])(f: A => Par[Boolean]): Prop = forAll(S.unsized ** g) { case s ** a => f(a)(s).get }
+
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
 
   def buildMsg[A](s: A, e: Exception): String =
@@ -110,9 +138,18 @@ object Prop {
       case Proved => println(s"+ OK, proved property.")
     }
 
-  def check(p: => Boolean): Prop = Prop { (_, _, _) => if (p) Passed else Falsified("()", 0)
-  }
+  def check(p: => Boolean): Prop = Prop { (_, _, _) => if (p) Passed else Falsified("()", 0) }
+  def checkPar(p: => Par[Boolean]): Prop = check(p(cachedThreadPool).get)
+  def equal[A](p: Par[A], p2: Par[A]): Par[Boolean] = Par.map2(p,p2)(_ == _)
 
+  val pint = Gen.choose(0,10) map (Par.unit)
+  lazy val pint2: Gen[Par[Int]] = choose(-100,100).listOfN(choose(0,20)).map(l =>
+    l.foldLeft(Par.unit(0))((p,i) =>
+      Par.fork { Par.map2(p, Par.unit(i))(_ + _) }))
+  val p4 = forAllPar(pint)(n => equal(Par.map(n)(y => y), n))
+  val p4WithPint2 = forAllPar(pint2)(n => equal(Par.map(n)(y => y), n))
+
+  val pFork = forAllPar(pint)((n: Par[Int]) => equal(Par.fork(n), n))
 }
 
 object PropWithTag {
@@ -155,10 +192,13 @@ case class FalsifiedWithTag(tag: String = "", failure: FailedCase, successes: Su
 case class Gen[+A](sample: State[RNG,A]) {
   def value(implicit rng: RNG): A = sample.run(rng)._1
   def map[B](f: A => B) = Gen(sample.map(f))
+  def map2[B, C](g: Gen[B])(f: (A, B) => C): Gen[C] = Gen(sample.flatMap(a => g.sample.map(f(a, _))))
   def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(sample.flatMap(a => f(a).sample))
   def listOfN(size: Gen[Int]): Gen[List[A]] = size.flatMap(n => Gen.listOfN(n, this))
 
   def unsized: SGen[A] = SGen(_ => this)
+
+  def **[B](g: Gen[B]): Gen[(A,B)] = (this map2 g)((_,_))
 }
 
 object Gen {
@@ -191,6 +231,10 @@ object Gen {
   def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = boolean.flatMap(if(_) g1 else g2)
   def weighted[A](g1: (Gen[A], Double), g2: (Gen[A], Double)): Gen[A] =
     Gen(State(RNG.double)).flatMap(d => if (d < (g1._2/(g1._2 + g2._2))) g1._1 else g2._1)
+
+  object ** {
+    def unapply[A,B](p: (A,B)) = Some(p)
+  }
 }
 
 //trait Gen[A] {
@@ -200,7 +244,9 @@ object Gen {
 
 case class SGen[+A](forSize: Int => Gen[A]) {
   def map[B](f: A => B): SGen[B] = SGen(n => forSize(n).map(f))
+  def map2[B, C](s: SGen[B])(f: (A, B) => C): SGen[C] = this.flatMap(a => s.map(f(a, _)))
   def flatMap[B](f: A => SGen[B]): SGen[B] = SGen(n => forSize(n).flatMap(a => f(a).forSize(n)))
+  def **[B](g: SGen[B]): SGen[(A,B)] = (this map2 g)((_,_))
 }
 
 object SGen {
@@ -218,6 +264,10 @@ object SGen {
   def union[A](g1: SGen[A], g2: SGen[A]): SGen[A] = boolean.flatMap(if(_) g1 else g2)
   def weighted[A](g1: (SGen[A], Double), g2: (SGen[A], Double)): SGen[A] =
     Gen(State(RNG.double)).unsized.flatMap(d => if (d < (g1._2/(g1._2 + g2._2))) g1._1 else g2._1)
+
+  object ** {
+    def unapply[A,B](p: (A,B)) = Some(p)
+  }
 }
 
 //trait SGen[+A] {

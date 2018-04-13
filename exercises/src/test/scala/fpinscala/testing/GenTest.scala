@@ -92,6 +92,7 @@ object GenTest extends App with SimpleBooleanTest {
       val max = ns.max
       !ns.exists(_ > max)
     }
+    println("max: ")
     Prop.run(maxProp, rng = rng)
 
     val sortProp = Prop.forAll(SGen.listOf(smallInt)) {
@@ -102,7 +103,15 @@ object GenTest extends App with SimpleBooleanTest {
         })._2
     }
 
+    println("sort: ")
     Prop.run(sortProp, rng = rng)
+
+    println("par: ")
+    Prop.run(Prop.p4, rng = RNG.Simple(1))
+    println("par.fork: ")
+    Prop.run(Prop.pFork, rng = RNG.Simple(2))
+
+    Prop.shutdownAllPools
   }
 
   run
