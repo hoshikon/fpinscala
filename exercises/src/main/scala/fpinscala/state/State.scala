@@ -144,4 +144,8 @@ object State {
   def unit[S, A](a: A): State[S, A] = State(s => (a, s))
   def sequence[S, A](list: List[State[S, A]]): State[S, List[A]] =
     list.foldRight(unit[S, List[A]](List.empty))(_.map2(_)(_ +: _))
+
+  import fpinscala.laziness.Stream
+  def streamSequence[S, A](fs: Stream[State[S, A]]): State[S, Stream[A]] =
+    fs.foldRight(unit[S, Stream[A]](Stream.empty[A]))(_.map2(_)(Stream.cons(_, _)))
 }
