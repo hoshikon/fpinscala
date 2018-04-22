@@ -28,7 +28,6 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
   implicit def regex(r: Regex): Parser[String]
   def singleDigitFollowedByAs: Parser[String] = "^[0-9]a*".r.flatMap(str => succeed(str.take(1)) ** listOfN(str.head.toInt, char('a')).slice).map { case (h,t) => h + t }
 
-
   case class ParserOps[A](p: Parser[A]) {
     def |[B>:A](p2: => Parser[B]): Parser[B] = self.or(p,p2)
     def or[B>:A](p2: => Parser[B]): Parser[B] = self.or(p,p2)
@@ -55,6 +54,7 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
           case (a, bc) => a == bc
         }
     }
+    def productLaw3[A](p1: Parser[A], p2: Parser[A], p3: Parser[A])(in: Gen[String]): Prop = equal(p1 ** (p2 ** p3), (p1 ** p2) ** p3)(in)
   }
 }
 
