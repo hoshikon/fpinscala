@@ -23,6 +23,7 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
   def slice[A](p: Parser[A]): Parser[String] //return the portion of the input string examined by the parser if successful
   def product[A,B](p: Parser[A], p2: => Parser[B]): Parser[(A,B)] = flatMap(p)(a => p2.map((a, _)))
   def map2[A,B,C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] = (p ** p2).map { case (a: A, b: B) => f(a, b) }
+  def map3[A,B,C,D](p: Parser[A], p2: => Parser[B], p3: Parser[C])(f: (A, B, C) => D): Parser[D] = (p ** p2 ** p3).map { case ((a: A, b: B), c: C) => f(a, b, c) }
   def map2WithFlatMap[A,B,C](p: Parser[A], p2: => Parser[B])(f: (A,B) => C): Parser[C] = flatMap(p)(a => p2.map(f(a, _)))
   def flatMap[A,B](p: Parser[A])(f: A => Parser[B]): Parser[B]
   implicit def regex(r: Regex): Parser[String]
@@ -132,4 +133,13 @@ object StringParser {
   })
 
   def numOfTwoChars(a: Char, b: Char): StringParser[(Int, Int)] = numOfChar(a).map2(numOfCharOneOrMore(b))((_, _))
+}
+
+object regexy extends App {
+  val quotes = "(\".*\")".r
+
+  "\"hello\"" match {
+    case quotes(p) => println(p)
+    case _ => println("not cool...")
+  }
 }
