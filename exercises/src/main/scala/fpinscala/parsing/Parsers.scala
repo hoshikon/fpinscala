@@ -5,12 +5,12 @@ import fpinscala.testing._
 import language.higherKinds
 import scala.util.matching.Regex
 
-trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call methods of trait
+trait Parsers[Parser[+_]] { self => // so inner classes may call methods of trait
 
   def run[A](p: Parser[A])(input: String): Either[ParseError,A]
   def char(c: Char): Parser[Char] = string(c.toString) map (_.charAt(0))
   implicit def string(s: String): Parser[String]
-  def orString(s1: String, s2: String): Parser[String]
+  def orString(s1: String, s2: String): Parser[String] = string(s1) or string(s2)
   def or[A](s1: Parser[A], s2: => Parser[A]): Parser[A]
   implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
   implicit def asStringParser[A](a: A)(implicit f: A => Parser[String]): ParserOps[String] = ParserOps(f(a))
@@ -28,6 +28,12 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
   def flatMap[A,B](p: Parser[A])(f: A => Parser[B]): Parser[B]
   implicit def regex(r: Regex): Parser[String]
   def singleDigitFollowedByAs: Parser[String] = "^[0-9]a*".r.flatMap(str => succeed(str.take(1)) ** listOfN(str.head.toInt, char('a')).slice).map { case (h,t) => h + t }
+
+  def label[A](msg: String)(p: Parser[A]): Parser[A]
+  def errorLocation(e: ParseError): Location = e.stack.head._1
+  def errorMessage(e: ParseError): String = e.stack.head._2
+  def scope[A](msg: String)(p: Parser[A]): Parser[A]
+  def attempt[A](p: Parser[A]): Parser[A]
 
   case class ParserOps[A](p: Parser[A]) {
     def |[B>:A](p2: => Parser[B]): Parser[B] = self.or(p,p2)
@@ -56,13 +62,24 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
         }
     }
     def productLaw3[A](p1: Parser[A], p2: Parser[A], p3: Parser[A])(in: Gen[String]): Prop = equal(p1 ** (p2 ** p3), (p1 ** p2) ** p3)(in)
+
+    def labelLaw[A](p: Parser[A], inputs: SGen[String]): Prop = Prop.forAll(inputs ** Gen.string) { case (input, msg) =>
+      run(label(msg)(p))(input) match {
+        case Left(e) => errorMessage(e) == msg
+        case _ => true
+      }
+    }
+
   }
 }
 
 case class Location(input: String, offset: Int = 0) {
 
   lazy val line = input.slice(0,offset+1).count(_ == '\n') + 1
-  lazy val col = input.slice(0,offset+1).reverse.indexOf('\n')
+  lazy val col = input.slice(0,offset+1).reverse.indexOf('\n') match {
+    case -1 => offset + 1
+    case lineStart => offset - lineStart
+  }
 
   def toError(msg: String): ParseError =
     ParseError(List((this, msg)))
@@ -77,69 +94,121 @@ case class Location(input: String, offset: Int = 0) {
 
 case class ParseError(stack: List[(Location,String)] = List(),
                       otherFailures: List[ParseError] = List()) {
+  def concat(p: ParseError): ParseError = ParseError(this.stack ::: p.stack, this.otherFailures ::: p.otherFailures)
 }
 
-object StringParsers extends Parsers[String, StringParser] {
-  override def run[A](p: StringParser[A])(input: String): Either[String, A] = p.parse(input)
-  override def char(c: Char): StringParser[Char] = StringParser.char(c)
-  override implicit def string(s: String): StringParser[String] = StringParser.string(s)
-  override def orString(s1: String, s2: String): StringParser[String] = string(s1) | string(s2)
-  override def or[A](s1: StringParser[A], s2: => StringParser[A]): StringParser[A] = s1.or(s2)
-  override def listOfN[A](n: Int, p: => StringParser[A]): StringParser[List[A]] = StringParser.listOfN(n, p)
-
-  override def slice[A](p: StringParser[A]): StringParser[String] = ???
-
-  override def flatMap[A, B](p: StringParser[A])(f: A => StringParser[B]): StringParser[B] = ???
-
-  override implicit def regex(r: Regex): StringParser[String] = ???
+class MyParser[+A](f: String => Either[ParseError, A]) {
+  def parse(input: String): Either[ParseError, A] = f(input)
 }
 
-case class StringParser[+A](parse: String => Either[String, A]) {
-  def or[B>:A](p: StringParser[B]): StringParser[B] = StringParser { str =>
-    parse(str) match {
-      case a@Right(_) => a
-      case Left(al) => p.parse(str) match {
-        case b@Right(_) => b
-        case Left(bl) => Left(s"$al, $bl")
-      }
+object MyParsers extends Parsers[MyParser] {
+  override def run[A](p: MyParser[A])(input: String): Either[ParseError, A] = p.parse(input)
+
+  override implicit def string(s: String): MyParser[String] = new MyParser( str => {
+    if (str == s) Right(str)
+    else {
+      val index = s.zip(str).indexWhere(t => t._1 != t._2)
+      Left(Location(s, index).toError(s"expected: ${str.charAt(index)} \nactual: ${s.charAt(index)}"))
     }
-  }
-
-  def map[B](f: A => B): StringParser[B] = StringParser(str => parse(str).map(f))
-  def map2[B, C](b: StringParser[B])(f: (A, B) => C): StringParser[C] = flatMap(a => b.map(f(a, _)))
-  def flatMap[B](f: A => StringParser[B]): StringParser[B] = StringParser(str => parse(str).flatMap(f(_).parse(str)))
-}
-
-object StringParser {
-  def char(c: Char): StringParser[Char] = StringParser(input => if (c.toString == input) Right(c) else Left(s"Expected char '$c'"))
-  def string(s: String): StringParser[String] = StringParser(input => if (s == input) Right(s) else Left(s"Expected string '$s'"))
-
-  def sequence[A](l: List[StringParser[A]]): StringParser[List[A]] = StringParser(input => {
-    l.foldLeft((input, Right(List.empty[A]): Either[String, List[A]])) { case ((substring, either), p) =>
-      if (either.isLeft) ("", either)
-      else substring.inits.toSeq.reverse.find(p.parse(_).isRight)
-        .map(str => (substring.replaceFirst(str, ""), either.flatMap(l => p.parse(str).map(l :+ _))))
-        .getOrElse(("", Left[String, List[A]]("Unable to find parsable string")))
-    }._2
   })
 
-  def listOfN[A](n: Int, p: StringParser[A]): StringParser[List[A]] = sequence(List.fill(n)(p))
-
-  def numOfChar(c: Char): StringParser[Int] = StringParser(input => Right(input.count(_==c)))
-
-  def numOfCharOneOrMore(c: Char): StringParser[Int] = StringParser(input => {
-    val n = input.count(_ == c)
-    if (n > 0) Right(n) else Left(s"Expected one or more '$c'")
+  override def or[A](s1: MyParser[A], s2: => MyParser[A]): MyParser[A] = new MyParser[A](str => {
+    s1.parse(str) match {
+      case Left(err) if str.startsWith(errorLocation(err).input) && errorLocation(err).offset < errorLocation(err).input.length => s2.parse(str) match {
+        case r@Right(_) => r
+        case Left(err2) => Left(err.concat(err2))
+      }
+      case otherwise => otherwise
+    }
   })
 
-  def numOfTwoChars(a: Char, b: Char): StringParser[(Int, Int)] = numOfChar(a).map2(numOfCharOneOrMore(b))((_, _))
+  override def slice[A](p: MyParser[A]): MyParser[String] = new MyParser[String](str => {
+    p.parse(str) match {
+      case Right(_) => Right(str)
+      case Left(err) => Left(err)
+    }
+  })
+
+  override def flatMap[A, B](p: MyParser[A])(f: A => MyParser[B]): MyParser[B] = new MyParser[B](str => {
+    p.parse(str) match {
+      case Right(a) => f(a).parse(str)
+      case Left(err) => Left(err)
+    }
+  })
+
+  override implicit def regex(r: Regex): MyParser[String] = new MyParser[String]({
+    case r(s) => Right(s)
+    case str => Left(Location(str).toError(s"expected: $r\nactual: $str"))
+  })
+
+  override def label[A](msg: String)(p: MyParser[A]): MyParser[A] = new MyParser[A](str =>
+    p.parse(str).left.map(err => err.copy(stack = err.stack.head.copy(_2 = msg) :: err.stack.tail))
+  )
+
+  override def scope[A](msg: String)(p: MyParser[A]): MyParser[A] = new MyParser[A](str =>
+    p.parse(str).left.map(err => err.copy(stack = (Location(str), msg) :: err.stack))
+  )
+
+  override def attempt[A](p: MyParser[A]): MyParser[A] = new MyParser[A](str => {
+    p.parse(str) match {
+      case r@Right(_) => r
+      case Left(err) => Left(err.copy(stack = err.stack.head.copy(_1 = err.stack.head._1.copy(input = str)) :: err.stack.tail))
+    }
+  })
 }
 
-object regexy extends App {
-  val quotes = "(\".*\")".r
-
-  "\"hello\"" match {
-    case quotes(p) => println(p)
-    case _ => println("not cool...")
-  }
-}
+//object StringParsers extends Parsers[StringParser] {
+//  override def run[A](p: StringParser[A])(input: String): Either[String, A] = p.parse(input)
+//  override def char(c: Char): StringParser[Char] = StringParser.char(c)
+//  override implicit def string(s: String): StringParser[String] = StringParser.string(s)
+//  override def orString(s1: String, s2: String): StringParser[String] = string(s1) | string(s2)
+//  override def or[A](s1: StringParser[A], s2: => StringParser[A]): StringParser[A] = s1.or(s2)
+//  override def listOfN[A](n: Int, p: => StringParser[A]): StringParser[List[A]] = StringParser.listOfN(n, p)
+//
+//  override def slice[A](p: StringParser[A]): StringParser[String] = ???
+//
+//  override def flatMap[A, B](p: StringParser[A])(f: A => StringParser[B]): StringParser[B] = ???
+//
+//  override implicit def regex(r: Regex): StringParser[String] = ???
+//}
+//
+//case class StringParser[+A](parse: String => Either[String, A]) {
+//  def or[B>:A](p: StringParser[B]): StringParser[B] = StringParser { str =>
+//    parse(str) match {
+//      case a@Right(_) => a
+//      case Left(al) => p.parse(str) match {
+//        case b@Right(_) => b
+//        case Left(bl) => Left(s"$al, $bl")
+//      }
+//    }
+//  }
+//
+//  def map[B](f: A => B): StringParser[B] = StringParser(str => parse(str).map(f))
+//  def map2[B, C](b: StringParser[B])(f: (A, B) => C): StringParser[C] = flatMap(a => b.map(f(a, _)))
+//  def flatMap[B](f: A => StringParser[B]): StringParser[B] = StringParser(str => parse(str).flatMap(f(_).parse(str)))
+//}
+//
+//object StringParser {
+//  def char(c: Char): StringParser[Char] = StringParser(input => if (c.toString == input) Right(c) else Left(s"Expected char '$c'"))
+//  def string(s: String): StringParser[String] = StringParser(input => if (s == input) Right(s) else Left(s"Expected string '$s'"))
+//
+//  def sequence[A](l: List[StringParser[A]]): StringParser[List[A]] = StringParser(input => {
+//    l.foldLeft((input, Right(List.empty[A]): Either[String, List[A]])) { case ((substring, either), p) =>
+//      if (either.isLeft) ("", either)
+//      else substring.inits.toSeq.reverse.find(p.parse(_).isRight)
+//        .map(str => (substring.replaceFirst(str, ""), either.flatMap(l => p.parse(str).map(l :+ _))))
+//        .getOrElse(("", Left[String, List[A]]("Unable to find parsable string")))
+//    }._2
+//  })
+//
+//  def listOfN[A](n: Int, p: StringParser[A]): StringParser[List[A]] = sequence(List.fill(n)(p))
+//
+//  def numOfChar(c: Char): StringParser[Int] = StringParser(input => Right(input.count(_==c)))
+//
+//  def numOfCharOneOrMore(c: Char): StringParser[Int] = StringParser(input => {
+//    val n = input.count(_ == c)
+//    if (n > 0) Right(n) else Left(s"Expected one or more '$c'")
+//  })
+//
+//  def numOfTwoChars(a: Char, b: Char): StringParser[(Int, Int)] = numOfChar(a).map2(numOfCharOneOrMore(b))((_, _))
+//}
