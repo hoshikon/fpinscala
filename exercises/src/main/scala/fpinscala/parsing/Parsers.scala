@@ -101,10 +101,15 @@ case class ParseError(stack: List[(Location,String)] = List(),
   def latest: Option[(Location,String)] = stack.lastOption
 
   override def toString: String = {
-    stack.sortBy(_._1.offset).groupBy(_._1.offset).map{ case (_, list) =>
+    val mainMessage = stack.sortBy(_._1.offset).groupBy(_._1.offset).map{ case (_, list) =>
       val location = list.head._1
       s"Error found at line ${location.line}: '${location.currentLine}'\n${list.map("  " + _._2).mkString("\n")}"
     }.mkString("\n")
+    val additionalMessage = if (otherFailures.nonEmpty) {
+      "Other failures:\n" + otherFailures.map(_.toString)
+    } else ""
+
+    mainMessage + additionalMessage
   }
 }
 
@@ -115,12 +120,12 @@ trait Result[+A] {
   }
 
   def uncommit: Result[A] = this match {
-    case Failure(e,true) => Failure(e,false)
+    case Failure(e, _) => Failure(e, 0)
     case _ => this
   }
 
   def addCommit(isCommitted: Boolean): Result[A] = this match {
-    case Failure(e, c) => Failure(e, c || isCommitted)
+    case Failure(e, c) => Failure(e, if (isCommitted) c + 1 else c)
     case _ => this
   }
 
@@ -130,7 +135,7 @@ trait Result[+A] {
   }
 }
 case class Success[+A](get: A, charsConsumed: Int) extends Result[A]
-case class Failure(get: ParseError, isCommitted: Boolean) extends Result[Nothing]
+case class Failure(get: ParseError, commits: Int) extends Result[Nothing]
 
 //object StringParsers extends Parsers[StringParser] {
 //  override def run[A](p: StringParser[A])(input: String): Either[String, A] = p.parse(input)

@@ -16,12 +16,18 @@ object MyParser {
 
     override implicit def string(s: String): Parser[String] = scope("Triggered by unmatched string") { (l: Location) =>
       if (l.input.drop(l.offset).startsWith(s)) Success(s, s.length)
-      else Failure(l.toError(s"expected: '$s' but was: '${l.input.slice(l.offset, l.offset + s.length)}'"), false)
+      else Failure(l.toError(s"expected: '$s' but was: '${l.input.slice(l.offset, l.offset + s.length)}'"), 0)
     }
 
     override def or[A](s1: Parser[A], s2: => Parser[A]): Parser[A] = (l: Location) =>
       s1(l) match {
-        case Failure(e, false) => s2(l)
+        case Failure(e, c) => s2(l) match {
+          case Failure(e2, c2) => {
+            if (c >= c2) Failure(e.copy(otherFailures = e.otherFailures :+ e2), c)
+            else Failure(e2.copy(otherFailures = e2.otherFailures :+ e), c2)
+          }
+          case r => r
+        }
         case r => r
       }
 
@@ -42,7 +48,7 @@ object MyParser {
 
       r.findPrefixOf(str) match {
         case Some(s) => Success(s, s.length)
-        case _ => Failure(l.toError(s"expected: '$r' but started from '${str.take(3)}...'"), false)
+        case _ => Failure(l.toError(s"expected: '$r' but started from '${str.take(3)}...'"), 0)
       }
     }
 
