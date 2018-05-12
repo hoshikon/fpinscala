@@ -12,11 +12,11 @@ object JSON {
 
   def jsonParser[Parser[+_]](P: Parsers[Parser]): Parser[JSON] = {
     import P._
-    val spaces: Parser[String] = char(' ').many.slice
+    val spaces: Parser[String] = (char(' ')|char('\n')).many.slice
     def jInt: Parser[JNumber] = regex("-?(?:0|[1-9][0-9]*)".r).map(int => JNumber(int.toDouble))
     def jDouble: Parser[JNumber] = regex("-?(?:0|[1-9][0-9]*)\\.[0-9]+([e|E][+-]?[0-9]+)?".r).map(d => JNumber(d.toDouble))
     def jBool: Parser[JBool] = regex("(true|false)".r).map(bool => JBool(bool.toBoolean))
-    def jArray: Parser[JArray] = map3(string("["), jAnyIgnoreComma.many, string("]"))((_, array: List[JSON], _) => JArray(array.toIndexedSeq))
+    def jArray: Parser[JArray] = map3(spaces ** string("[") ** spaces, jAnyIgnoreComma.many, spaces ** string("]") ** spaces)((_, array: List[JSON], _) => JArray(array.toIndexedSeq))
     def jString: Parser[JString] = regex("\"((?!\").)*\"".r).map(str => JString(str.tail.init))
     def jNull: Parser[JNull.type] = regex("null".r).map(_ => JNull)
     def jAny: Parser[JSON] = jDouble|jInt|jBool|jArray|jString|jNull|jObject

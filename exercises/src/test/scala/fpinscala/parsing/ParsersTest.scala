@@ -9,23 +9,27 @@ object ParsersTest extends App with SimpleBooleanTest {
     val jsonParser: Parser[JSON] = JSON.jsonParser(MyParser.MyParsers)
     val input =
       "{" +
-        "\"name\" : \"Hoshikon\"," +
-        "\"age\" : 31," +
-        "\"height\" : 165.5," +
-        "\"married\" : true" +
-        "\"friends\" : [" +
-          "{" +
-              "\"name\" : \"Eugene\"," +
-              "\"age\" : 27" +
-          "}," +
-          "{"  +
-              "\"name\" : \"Greg\"," +
-              "\"age\" : 24" +
-          "}" +
-        "]" +
-        " }"
+      "  \"name\" : \"Hoshikon\",\n" +
+      "  \"age\" : 31,\n" +
+      "  \"height\" : 165.5,\n" +
+      "  \"married\" : true,\n" +
+      "  \"friends\" : [\n" +
+      "    {\n" +
+      "        \"name\" : \"Eugene\",\n" +
+      "        \"age\" : 27\n" +
+      "    },\n" +
+      "    {\n"  +
+      "        \"name\" : \"Greg\",\n" +
+      "        \"age\" : 24\n" +
+      "    }\n" +
+      "  ]\n" +
+      "}"
 
     val result: Either[ParseError, JSON] = MyParser.MyParsers.run(jsonParser)(input)
+    result match {
+      case Right(a) => println(a)
+      case Left(err) => println(err)
+    }
 
     val expected = JObject(
       Map(
