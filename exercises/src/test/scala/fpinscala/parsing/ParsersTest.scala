@@ -2,11 +2,11 @@ package fpinscala.parsing
 
 import fpinscala.SimpleBooleanTest
 import fpinscala.parsing.JSON._
-import fpinscala.parsing.MyParser.Parser
+import fpinscala.parsing.MyParser._
 
 object ParsersTest extends App with SimpleBooleanTest {
   override def run: Unit = {
-    val jsonParser: Parser[JSON] = JSON.jsonParser(MyParser.MyParsers)
+    val jsonParser: Parser[JSON] = JSON.jsonParser(MyParsers)
     val input =
       "{" +
       "  \"name\" : \"Hoshikon\",\n" +
@@ -25,7 +25,7 @@ object ParsersTest extends App with SimpleBooleanTest {
       "  ]\n" +
       "}"
 
-//    val result: Either[ParseError, JSON] = MyParser.MyParsers.run(jsonParser)(input)
+    val result: Either[ParseError, JSON] = MyParsers.run(jsonParser)(input)
 //    result match {
 //      case Right(a) => println(a)
 //      case Left(err) => println(err)
