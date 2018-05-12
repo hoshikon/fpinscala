@@ -39,7 +39,7 @@ trait Parsers[Parser[+_]] { self => // so inner classes may call methods of trai
     def |[B>:A](p2: => Parser[B]): Parser[B] = self.or(p,p2)
     def or[B>:A](p2: => Parser[B]): Parser[B] = self.or(p,p2)
     def many: Parser[List[A]] = map2(p, many)(_ :: _)|succeed(List.empty)
-    def many1: Parser[List[A]] = map2(p, many)((_, m) => m)
+    def many1: Parser[List[A]] = map2(p, many)(_ :: _)
     def map[B](f: A => B): Parser[B] = p.flatMap(a => succeed(f(a)))  //map2WithFlatMap(p, string(""))((a,_) => f(a))
     def slice: Parser[String] = self.slice(p)
     def **[B>:A](p2: => Parser[B]): Parser[(A,B)] = self.product(p, p2)
@@ -95,67 +95,35 @@ case class Location(input: String, offset: Int = 0) {
 case class ParseError(stack: List[(Location,String)] = List(),
                       otherFailures: List[ParseError] = List()) {
   def concat(p: ParseError): ParseError = ParseError(this.stack ::: p.stack, this.otherFailures ::: p.otherFailures)
+  def push(loc: Location, msg: String): ParseError = copy(stack = (loc,msg) :: stack)
+  def label[A](s: String): ParseError = ParseError(latestLoc.map((_,s)).toList)
+  def latestLoc: Option[Location] = latest map (_._1)
+  def latest: Option[(Location,String)] = stack.lastOption
 }
 
-class MyParser[+A](f: String => Either[ParseError, A]) {
-  def parse(input: String): Either[ParseError, A] = f(input)
+trait Result[+A] {
+  def mapError(f: ParseError => ParseError): Result[A] = this match {
+    case Failure(e, c) => Failure(f(e), c)
+    case _ => this
+  }
+
+  def uncommit: Result[A] = this match {
+    case Failure(e,true) => Failure(e,false)
+    case _ => this
+  }
+
+  def addCommit(isCommitted: Boolean): Result[A] = this match {
+    case Failure(e, c) => Failure(e, c || isCommitted)
+    case _ => this
+  }
+
+  def advanceSuccess(n: Int): Result[A] = this match {
+    case Success(a, m) => Success(a, n + m)
+    case _ => this
+  }
 }
-
-object MyParsers extends Parsers[MyParser] {
-  override def run[A](p: MyParser[A])(input: String): Either[ParseError, A] = p.parse(input)
-
-  override implicit def string(s: String): MyParser[String] = new MyParser( str => {
-    if (str == s) Right(str)
-    else {
-      val index = s.zip(str).indexWhere(t => t._1 != t._2)
-      Left(Location(s, index).toError(s"expected: ${str.charAt(index)} \nactual: ${s.charAt(index)}"))
-    }
-  })
-
-  override def or[A](s1: MyParser[A], s2: => MyParser[A]): MyParser[A] = new MyParser[A](str => {
-    s1.parse(str) match {
-      case Left(err) if str.startsWith(errorLocation(err).input) && errorLocation(err).offset < errorLocation(err).input.length => s2.parse(str) match {
-        case r@Right(_) => r
-        case Left(err2) => Left(err.concat(err2))
-      }
-      case otherwise => otherwise
-    }
-  })
-
-  override def slice[A](p: MyParser[A]): MyParser[String] = new MyParser[String](str => {
-    p.parse(str) match {
-      case Right(_) => Right(str)
-      case Left(err) => Left(err)
-    }
-  })
-
-  override def flatMap[A, B](p: MyParser[A])(f: A => MyParser[B]): MyParser[B] = new MyParser[B](str => {
-    p.parse(str) match {
-      case Right(a) => f(a).parse(str)
-      case Left(err) => Left(err)
-    }
-  })
-
-  override implicit def regex(r: Regex): MyParser[String] = new MyParser[String]({
-    case r(s) => Right(s)
-    case str => Left(Location(str).toError(s"expected: $r\nactual: $str"))
-  })
-
-  override def label[A](msg: String)(p: MyParser[A]): MyParser[A] = new MyParser[A](str =>
-    p.parse(str).left.map(err => err.copy(stack = err.stack.head.copy(_2 = msg) :: err.stack.tail))
-  )
-
-  override def scope[A](msg: String)(p: MyParser[A]): MyParser[A] = new MyParser[A](str =>
-    p.parse(str).left.map(err => err.copy(stack = (Location(str), msg) :: err.stack))
-  )
-
-  override def attempt[A](p: MyParser[A]): MyParser[A] = new MyParser[A](str => {
-    p.parse(str) match {
-      case r@Right(_) => r
-      case Left(err) => Left(err.copy(stack = err.stack.head.copy(_1 = err.stack.head._1.copy(input = str)) :: err.stack.tail))
-    }
-  })
-}
+case class Success[+A](get: A, charsConsumed: Int) extends Result[A]
+case class Failure(get: ParseError, isCommitted: Boolean) extends Result[Nothing]
 
 //object StringParsers extends Parsers[StringParser] {
 //  override def run[A](p: StringParser[A])(input: String): Either[String, A] = p.parse(input)
