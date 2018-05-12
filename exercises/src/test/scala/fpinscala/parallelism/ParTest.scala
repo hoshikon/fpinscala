@@ -33,18 +33,18 @@ object ParTest extends App with SimpleBooleanTest{
       case Left(toe: TimeoutException) => true
       case _ => false
     }
-    println((map2WithTimeoutTest && map2WithTimeoutTest2) + ": map2 with timeout")
+    printTest((map2WithTimeoutTest && map2WithTimeoutTest2), "map2 with timeout")
 
     val asyncFTest = Par.asyncF((a: Int) => a*2)(2)(es).get == 4
-    println(asyncFTest + ": asyncF")
+    printTest(asyncFTest, "asyncF")
 
     val par1 = Par.lazyUnit(1)
     val par2 = Par.lazyUnit(2)
     val sequenceTest = Par.sequence(List(par1, par2))(es).get == List(1,2)
-    println(sequenceTest + ": sequence")
+    printTest(sequenceTest, "sequence")
 
     val parFilterTest = Par.parFilter(List(1,2,3,4,5,6,7))(_ => true)(es).get == List(1,2,3,4,5,6,7)
-    println(parFilterTest + ": parFilter")
+    printTest(parFilterTest, "parFilter")
 
 //===This will trigger deadlock===
 //    val a = Par.lazyUnit(42 + 1)
@@ -68,10 +68,10 @@ object ParTest extends App with SimpleBooleanTest{
 
     val choices = List(Par.unit("a"), Par.unit("b"), Par.unit("c"))
     val choiceNTest = Par.choiceN(Par.unit(1))(choices)(es).get == "b"
-    println(choiceNTest + ": choiceN")
+    printTest(choiceNTest, "choiceN")
 
     val choiceWithChoiceNTest = Par.choiceWithChoiceN(Par.unit(false))(Par.unit("true"), Par.unit("false"))(es).get == "false"
-    println(choiceWithChoiceNTest + ": choice with choiceN")
+    printTest(choiceWithChoiceNTest, "choice with choiceN")
 
 
     val choicesMap = Map("one" -> Par.unit(1), "two" -> Par.unit(2), "three" -> Par.unit(3))
@@ -80,16 +80,16 @@ object ParTest extends App with SimpleBooleanTest{
     val choiceMapTest = Par.choiceMap(Par.unit("two"))(choicesMap)(es).get == 2
     val choiceGeneralTest = choiceWithGeneralTest && choiceNWithGeneralTest && choiceMapTest
 
-    println(choiceGeneralTest + ": more general choice")
+    printTest(choiceGeneralTest, "more general choice")
 
     val joinTest = Par.join(Par.unit(Par.unit("x")))(es).get == "x"
-    println(joinTest + ": join")
+    printTest(joinTest, "join")
 
     val flatMapWithJoinTest = Par.flatMapWithJoin(Par.unit("1"))(x => Par.unit(x.toInt))(es).get == 1
-    println(flatMapWithJoinTest + ": flatMap with join")
+    printTest(flatMapWithJoinTest, "flatMap with join")
 
     val joinWithFlatMapTest = Par.joinWithFlatMap(Par.unit(Par.unit("1")))(es).get == "1"
-    println(joinWithFlatMapTest + ": join with flatMap")
+    printTest(joinWithFlatMapTest, "join with flatMap")
 
     es.shutdown()
   }

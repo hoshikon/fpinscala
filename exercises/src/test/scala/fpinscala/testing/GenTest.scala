@@ -33,57 +33,57 @@ object GenTest extends App with SimpleBooleanTest {
     implicit val rng = Simple(1)
 
     val unitTest = Gen.unit(1).value == 1
-    println(unitTest + ": unit")
+    printTest(unitTest, "unit")
 
     val chooseTest = tryNTimes(100, Gen.choose(10, 15), rng)(n => n >= 10 && n < 15)
-    println(chooseTest + ": choose")
+    printTest(chooseTest, "choose")
 
     val listOfNTest = Gen.listOfN(100, Gen.choose(10, 15)).value.forall(n => n >= 10 && n < 15)
-    println(listOfNTest + ": list of n")
+    printTest(listOfNTest, "list of n")
 
     val ints = Gen.listOfN(10, Gen.int).value
-    println(true + ": int | output => " + ints)
+    printTest(true, "int | output => " + ints)
 
     val booleans = Gen.listOfN(10, Gen.boolean).value
-    println(true + ": boolean | output => " + booleans)
+    printTest(true, "boolean | output => " + booleans)
 
     val int = Gen.int
     val toOptionTest = Gen.toOption(int).value == Some(int.value)
-    println(toOptionTest + ": toOption")
+    printTest(toOptionTest, "toOption")
 
     val fromOptionTest = Gen.fromOption(Gen.unit[Option[Int]](Some(2))).value == 2
-    println(fromOptionTest + ": fromOption")
+    printTest(fromOptionTest, "fromOption")
 
     val strings = Gen.listOfN(10, Gen.string(3)).value
-    println(true + ": string | output => " + strings)
+    printTest(true, "string | output => " + strings)
 
     val flatMapTest = Gen.unit(3).flatMap(n => Gen.unit(n * n)).value == 9
-    println(flatMapTest + ": flatMap")
+    printTest(flatMapTest, "flatMap")
 
     val listOfGenNTest = Gen.unit(1).listOfN(Gen.unit(3)).value == List(1, 1, 1)
-    println(listOfGenNTest + ": list of n with Gen[Int]")
+    printTest(listOfGenNTest, "list of n with Gen[Int]")
 
     val unions = Gen.listOfN(10, Gen.union(Gen.unit(1), Gen.unit(2))).value
-    println(true + ": union | output => " + unions)
+    printTest(true, "union | output => " + unions)
 
     val weighteds = Gen.listOfN(100, Gen.weighted((Gen.unit(true), 0.1),(Gen.unit(false), 0.9))).value
     val (shouldBe10Percent, shouldBe90Percent) = {
       val map = weighteds.groupBy(identity)
       (map(true).length, map(false).length)
     }
-    println(true + ": weighted | output => " + shouldBe10Percent + ":" + shouldBe90Percent + " (this should be around 1:9)")
+    printTest(true, "weighted | output => " + shouldBe10Percent + ":" + shouldBe90Percent + " (this should be around 1:9)")
 
     val trues = PropWithTag.forAllWithTag("trues", Gen.unit(true))(identity)
     val falses = PropWithTag.forAllWithTag("falses", Gen.unit(false))(identity)
     val ands = trues && falses
     val ors = falses || trues
     val andTest = ands.run(3, rng) == FalsifiedWithTag("falses", "false", 0)
-    println(andTest + ": &&")
+    printTest(andTest, "&&")
     val orTest = ors.run(3, rng) == Passed
-    println(orTest + ": ||")
+    printTest(orTest, "||")
 
     val listOfTest = Gen.listOf(Gen.unit(1)).forSize(3).value == List(1,1,1)
-    println(listOfTest + ": SGen.listOf")
+    printTest(listOfTest, "SGen.listOf")
 
     val smallInt = Gen.choose(-10,10)
 
@@ -93,8 +93,8 @@ object GenTest extends App with SimpleBooleanTest {
       val max = ns.max
       !ns.exists(_ > max)
     }
-    println("max: ")
-    Prop.run(maxProp, rng = rng)
+    val maxTest = Prop.run(maxProp, rng = rng).startsWith("+")
+    printTest(maxTest, "max")
 
     val sortProp = Prop.forAll(Gen.listOf(smallInt)) {
       ns =>
@@ -104,13 +104,13 @@ object GenTest extends App with SimpleBooleanTest {
         })._2
     }
 
-    println("sort: ")
-    Prop.run(sortProp, rng = rng)
+    val sortTest = Prop.run(sortProp, rng = rng).startsWith("+")
+    printTest(sortTest, "sort")
 
-    println("par: ")
-    Prop.run(Prop.p4, rng = RNG.Simple(1))
-    println("par.fork: ")
-    Prop.run(Prop.pFork, rng = RNG.Simple(2))
+    val parTest = Prop.run(Prop.p4, rng = RNG.Simple(1)).startsWith("+")
+    printTest(parTest, "par")
+    val parForkTest = Prop.run(Prop.pFork, rng = RNG.Simple(2)).startsWith("+")
+    printTest(parForkTest, "par.fork")
 
     Prop.shutdownAllPools
 
@@ -139,8 +139,8 @@ object GenTest extends App with SimpleBooleanTest {
       val allProps = takeWhileProp && takeProp && dropProp && filterProp
     }
 
-    println("list prop: ")
-    Prop.run(ListProps.allProps, rng = rng)
+    val listPropTest = Prop.run(ListProps.allProps, rng = rng).startsWith("+")
+    printTest(listPropTest, "list prop")
 
     object StreamProps {
       import fpinscala.laziness.Stream
@@ -169,30 +169,30 @@ object GenTest extends App with SimpleBooleanTest {
       val allProps = takeWhileProp && takeProp && dropProp && filterProp && unfoldProp
     }
 
-    println("stream prop: ")
-    Prop.run(StreamProps.allProps, rng = rng)
+    val streamPropTest = Prop.run(StreamProps.allProps, rng = rng).startsWith("+")
+    printTest(streamPropTest, "stream prop")
 
     val treeFoldProp =
       Prop.forAll(Gen.treeOf(Gen.int)){ tree => Tree.size(tree) == Tree.fold(tree)(_ => 1, (trA, trB) => Tree.size(trA) + Tree.size(trB) + 1)} &&
       Prop.forAll(Gen.treeOf(Gen.int)){ tree => Tree.maximum(tree) == Tree.fold(tree)(identity, (trA, trB) => Tree.maximum(trA) max Tree.maximum(trB)) }
 
-    println("tree fold prop: ")
-    Prop.run(treeFoldProp, rng = rng)
+    val treeFoldPropTest = Prop.run(treeFoldProp, rng = rng).startsWith("+")
+    printTest(treeFoldPropTest, "tree fold prop")
 
     import fpinscala.errorhandling.{Option, Some, None, Either, Right, Left}
     val optionSequenceProp =
       Prop.forAll(Gen.listOf(int)){ l => Option.sequence(l.map(Some.apply)) == Some(l) } &&
       Prop.forAll(Gen.listOf(int)){ l => Option.sequence(l.map(Some.apply) :+ None) == None }
 
-    println("option sequence prop: ")
-    Prop.run(optionSequenceProp, rng = rng)
+    val optionSequencePropTest = Prop.run(optionSequenceProp, rng = rng).startsWith("+")
+    printTest(optionSequencePropTest, "option sequence prop")
 
     val eitherSequenceProp =
       Prop.forAll(Gen.listOf(int)){ l => Either.sequence(l.map(Right.apply)) == Right(l) } &&
       Prop.forAll(Gen.listOf(int)){ l => Either.sequence(l.map(Right.apply) :+ Left(2)) == Left(2) }
 
-    println("either sequence prop: ")
-    Prop.run(eitherSequenceProp, rng = rng)
+    val eitherSequencePropTest = Prop.run(eitherSequenceProp, rng = rng).startsWith("+")
+    printTest(eitherSequencePropTest, "either sequence prop")
 
   }
 

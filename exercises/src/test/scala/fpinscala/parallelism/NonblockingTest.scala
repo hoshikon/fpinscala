@@ -15,7 +15,7 @@ object NonblockingTest extends App with SimpleBooleanTest {
       NB.Par.runButCatchError(es)(NB.Par.unit[Int]{throw new Exception("throwing exception, as you can see")})
     }.map(_ => false).getOrElse(true)
 
-    println(runButCatchErrorTest + ": run but catch error")
+    printTest(runButCatchErrorTest, "run but catch error")
   }
 
   run

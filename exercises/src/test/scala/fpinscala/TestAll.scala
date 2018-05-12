@@ -5,6 +5,7 @@ import fpinscala.errorhandling.{EitherTest, OptionTest}
 import fpinscala.gettingstarted.GettingStartedTest
 import fpinscala.laziness.StreamTest
 import fpinscala.parallelism.{NonblockingTest, ParTest}
+import fpinscala.parsing.ParsersTest
 import fpinscala.state.StateTest
 import fpinscala.testing.GenTest
 
@@ -19,7 +20,8 @@ object TestAll extends App {
     StateTest,
     ParTest,
     NonblockingTest,
-    GenTest
+    GenTest,
+    ParsersTest
   )
 
   tests.foreach(t => {
@@ -30,8 +32,8 @@ object TestAll extends App {
 
 trait SimpleBooleanTest {
   def run: Unit
-  def println(s: String) = {
-    val colour = if (s.startsWith("true")) Console.GREEN else if (s.startsWith("false")) Console.RED else Console.YELLOW
-    Predef.println(colour + s + Console.RESET)
+  def printTest(passed: Boolean, name: String) = {
+    val colour = if (passed) Console.GREEN else Console.RED
+    Predef.println(colour + passed + ": " + name + Console.RESET)
   }
 }
