@@ -14,7 +14,7 @@ object MyParser {
     override def succeed[A](a: A): Parser[A] = (_: Location) => Success(a, 0)
 
 
-    override implicit def string(s: String): Parser[String] = scope("Unmatched string") { (l: Location) =>
+    override implicit def string(s: String): Parser[String] = scope("Triggered by unmatched string") { (l: Location) =>
       if (l.input.drop(l.offset).startsWith(s)) Success(s, s.length)
       else Failure(l.toError(s"expected: '$s' but was: '${l.input.slice(l.offset, l.offset + s.length)}'"), false)
     }
@@ -37,7 +37,7 @@ object MyParser {
         case f@Failure(_,_) => f
       }
 
-    override implicit def regex(r: Regex): Parser[String] = (l: Location) => {
+    override implicit def regex(r: Regex): Parser[String] = scope("Triggered by unmatched regex") { (l: Location) =>
       val str = l.input.drop(l.offset)
 
       r.findPrefixOf(str) match {

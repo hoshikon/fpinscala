@@ -99,6 +99,13 @@ case class ParseError(stack: List[(Location,String)] = List(),
   def label[A](s: String): ParseError = ParseError(latestLoc.map((_,s)).toList)
   def latestLoc: Option[Location] = latest map (_._1)
   def latest: Option[(Location,String)] = stack.lastOption
+
+  override def toString: String = {
+    stack.sortBy(_._1.offset).groupBy(_._1.offset).map{ case (_, list) =>
+      val location = list.head._1
+      s"Error found at line ${location.line}: '${location.currentLine}'\n${list.map("  " + _._2).mkString("\n")}"
+    }.mkString("\n")
+  }
 }
 
 trait Result[+A] {

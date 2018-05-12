@@ -25,11 +25,11 @@ object ParsersTest extends App with SimpleBooleanTest {
       "  ]\n" +
       "}"
 
-    val result: Either[ParseError, JSON] = MyParser.MyParsers.run(jsonParser)(input)
-    result match {
-      case Right(a) => println(a)
-      case Left(err) => println(err)
-    }
+//    val result: Either[ParseError, JSON] = MyParser.MyParsers.run(jsonParser)(input)
+//    result match {
+//      case Right(a) => println(a)
+//      case Left(err) => println(err)
+//    }
 
     val expected = JObject(
       Map(
