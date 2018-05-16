@@ -21,28 +21,52 @@ object Monoid {
     val zero = Nil
   }
 
-  val intAddition: Monoid[Int] = ???
+  val intAddition: Monoid[Int] = new Monoid[Int] {
+    override def zero: Int = 0
+    override def op(a1: Int, a2: Int): Int = a1 + a2
+  }
 
-  val intMultiplication: Monoid[Int] = ???
+  val intMultiplication: Monoid[Int] = new Monoid[Int] {
+    override def zero: Int = 1
+    override def op(a1: Int, a2: Int): Int = a1 * a2
+  }
 
-  val booleanOr: Monoid[Boolean] = ???
+  val booleanOr: Monoid[Boolean] = new Monoid[Boolean] {
+    override def zero: Boolean = false
+    override def op(a1: Boolean, a2: Boolean): Boolean = a1 || a2
+  }
 
-  val booleanAnd: Monoid[Boolean] = ???
+  val booleanAnd: Monoid[Boolean] = new Monoid[Boolean] {
+    override def zero: Boolean = true
+    override def op(a1: Boolean, a2: Boolean): Boolean = a1 && a2
+  }
 
-  def optionMonoid[A]: Monoid[Option[A]] = ???
+  def optionMonoid[A]: Monoid[Option[A]] = new Monoid[Option[A]] {
+    override def zero: Option[A] = None
+    override def op(a1: Option[A], a2: Option[A]): Option[A] = a1 orElse a2
+  }
 
-  def endoMonoid[A]: Monoid[A => A] = ???
+  def endoMonoid[A]: Monoid[A => A] = new Monoid[A => A] {
+    override def zero: A => A = identity
+    override def op(a1: A => A, a2: A => A): A => A = a1 andThen a2
+  }
 
   // TODO: Placeholder for `Prop`. Remove once you have implemented the `Prop`
   // data type from Part 2.
-  trait Prop {}
+//  trait Prop {}
 
   // TODO: Placeholder for `Gen`. Remove once you have implemented the `Gen`
   // data type from Part 2.
 
   import fpinscala.testing._
   import Prop._
-  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop = ???
+  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop = {
+    val law1 = forAll(Gen.listOfN(3, gen)){ case List(a1, a2, a3) => {
+      m.op(a1, m.op(a2, a3)) == m.op(m.op(a1, a2), a3)
+    }}
+    val law2 = forAll(gen)(a => m.op(a, m.zero) == m.op(m.zero, a))
+    law1 && law2
+  }
 
   def trimMonoid(s: String): Monoid[String] = ???
 

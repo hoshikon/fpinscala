@@ -4,6 +4,7 @@ import fpinscala.datastructures.{ListTest, TreeTest}
 import fpinscala.errorhandling.{EitherTest, OptionTest}
 import fpinscala.gettingstarted.GettingStartedTest
 import fpinscala.laziness.StreamTest
+import fpinscala.monoids.MonoidTest
 import fpinscala.parallelism.{NonblockingTest, ParTest}
 import fpinscala.parsing.ParsersTest
 import fpinscala.state.StateTest
@@ -21,7 +22,8 @@ object TestAll extends App {
     ParTest,
     NonblockingTest,
     GenTest,
-    ParsersTest
+    ParsersTest,
+    MonoidTest
   )
 
   tests.foreach(t => {
