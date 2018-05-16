@@ -70,11 +70,10 @@ object Monoid {
 
   def trimMonoid(s: String): Monoid[String] = ???
 
-  def concatenate[A](as: List[A], m: Monoid[A]): A =
-    ???
+  def concatenate[A](as: List[A], m: Monoid[A]): A = as.foldLeft(m.zero)(m.op)
 
-  def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B =
-    ???
+  def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B = concatenate(as.map(f), m)
+
 
   def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
     ???
