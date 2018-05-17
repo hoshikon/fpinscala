@@ -75,29 +75,47 @@ object Monoid {
   def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B = concatenate(as.map(f), m)
 
 
-  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
-    ???
+  // write foldLeft and foldRight using foldMap
+  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B = foldMap(as, new Monoid[B => B] {
+    override def zero: B => B = identity
+    override def op(a1: B => B, a2: B => B): B => B = a2 andThen a1
+  })(a => f(a, _))(z)
 
-  def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B =
-    ???
+  def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B = foldMap(as, endoMonoid[B])(a => f(_, a))(z)
 
-  def foldMapV[A, B](as: IndexedSeq[A], m: Monoid[B])(f: A => B): B =
-    ???
+  def foldMapV[A, B](as: IndexedSeq[A], m: Monoid[B])(f: A => B): B = {
+    val length = as.length
+    if (length == 0) m.zero
+    else if (length == 1) f(as.head)
+    else if (length == 2) m.op(f(as.head), f(as.last))
+    else {
+      val (as1, as2) = as.splitAt(length / 2)
+      m.op(foldMapV(as1, m)(f), foldMapV(as2, m)(f))
+    }
+  }
 
-  def ordered(ints: IndexedSeq[Int]): Boolean =
-    ???
+  def ordered(ints: IndexedSeq[Int]): Boolean = foldMapV(ints, new Monoid[Option[(Int, Int)]] {
+    override def op(a1: Option[(Int, Int)], a2: Option[(Int, Int)]): Option[(Int, Int)] = for {
+      (min1, max1) <- a1
+      (min2, max2) <- a2
+      if max1 <= min2
+    } yield (min1, max2)
+
+    override def zero: Option[(Int, Int)] = Some((Int.MinValue, Int.MinValue))
+  })(a => Some((a, a))).isDefined
 
   sealed trait WC
   case class Stub(chars: String) extends WC
   case class Part(lStub: String, words: Int, rStub: String) extends WC
 
-  def par[A](m: Monoid[A]): Monoid[Par[A]] = 
-    ???
+  def par[A](m: Monoid[A]): Monoid[Par[A]] = new Monoid[Par[A]] {
+    override def zero: Par[A] = Par.unit(m.zero)
+    override def op(a1: Par[A], a2: Par[A]): Par[A] = Par.map2(Par.fork(a1), Par.fork(a2))(m.op)
+  }
 
-  def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] = 
-    ???
+  def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] = foldMapV(v, par(m))(Par.asyncF(f))
 
-  val wcMonoid: Monoid[WC] = ???
+  val wcMonoid: Monoid[WC] = null//???
 
   def count(s: String): Int = ???
 
