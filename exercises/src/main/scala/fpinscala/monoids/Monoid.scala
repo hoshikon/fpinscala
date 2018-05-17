@@ -115,7 +115,15 @@ object Monoid {
 
   def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] = foldMapV(v, par(m))(Par.asyncF(f))
 
-  val wcMonoid: Monoid[WC] = null//???
+  val wcMonoid: Monoid[WC] = new Monoid[WC] {
+    override def zero: WC = Stub("")
+    override def op(a1: WC, a2: WC): WC = (a1, a2) match {
+      case (Stub(chars1), Stub(chars2)) => Stub(chars1 + chars2)
+      case (Stub(chars), Part(lst, words, rst)) => Part(chars + lst, words, rst)
+      case (Part(lst, words, rst), Stub(chars)) => Part(lst, words, rst + chars)
+      case (Part(lst1, words1, _), Part(_, words2, rst2)) => Part(lst1, words1 + 1 + words2, rst2)
+    }
+  }
 
   def count(s: String): Int = ???
 

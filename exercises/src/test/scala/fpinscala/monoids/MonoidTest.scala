@@ -25,6 +25,30 @@ object MonoidTest extends App with SimpleBooleanTest {
     val orderedTest = ordered(Vector(1,2,3,4,5,6,7,8)) && !ordered(Vector(1,2,3,4,5,3))
     printTest(orderedTest, "ordered")
 
+
+    val wcMonoidTest = {
+      import wcMonoid._
+      val wcs = Seq(
+        Stub(""),
+        Stub("a"),
+        zero,
+        Part("", 3, "b"),
+        Part("c", 4, ""),
+        Part("d", 0, "e"),
+        Part("f", 5, "g")
+      )
+
+      val law1 = op(zero, Stub("a")) == op(Stub("a"), zero) && op(zero, Part("a", 2, "b")) == op(Part("a", 2, "b"), zero)
+      val law2 = (for {
+          wc1 <- wcs
+          wc2 <- wcs
+          wc3 <- wcs
+        } yield op(wc1, op(wc2, wc3)) == op(op(wc1, wc2), wc3)).forall(identity)
+
+      law1 && law2
+    }
+    printTest(wcMonoidTest, "wcMonoid")
+
     es.shutdown()
   }
 
