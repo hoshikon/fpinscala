@@ -121,11 +121,23 @@ object Monoid {
       case (Stub(chars1), Stub(chars2)) => Stub(chars1 + chars2)
       case (Stub(chars), Part(lst, words, rst)) => Part(chars + lst, words, rst)
       case (Part(lst, words, rst), Stub(chars)) => Part(lst, words, rst + chars)
-      case (Part(lst1, words1, _), Part(_, words2, rst2)) => Part(lst1, words1 + 1 + words2, rst2)
+      case (Part(lst1, words1, rst1), Part(lst2, words2, rst2)) => Part(lst1, words1 + zeroOrOne(rst1 + lst2) + words2, rst2)
     }
   }
 
-  def count(s: String): Int = ???
+  private def zeroOrOne(str: String): Int = if (str.isEmpty) 0 else 1
+
+  def count(s: String): Int = {
+    def charToWC(c: Char) = c.toString match {
+      case " " => Part("", 0, "")
+      case char => Stub(char)
+    }
+
+    foldMapV(s.toIndexedSeq, wcMonoid)(charToWC) match {
+      case Part(lst, w, rst) => zeroOrOne(lst) + w + zeroOrOne(rst)
+      case Stub(char) => zeroOrOne(char)
+    }
+  }
 
   def productMonoid[A,B](A: Monoid[A], B: Monoid[B]): Monoid[(A, B)] =
     ???

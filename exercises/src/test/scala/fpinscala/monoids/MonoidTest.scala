@@ -49,6 +49,22 @@ object MonoidTest extends App with SimpleBooleanTest {
     }
     printTest(wcMonoidTest, "wcMonoid")
 
+    val countTest = {
+      val lines = Seq(
+        "hello I'm yasu",
+        " I am a software developer! ",
+        "oh wait is this really working!?",
+        "wow, this is, awesome",
+        "two  spaces   or   even   three   ",
+        "Bacon ipsum dolor amet pig beef ribs pancetta, cupim meatball tongue swine pork belly landjaeger. Hamburger doner beef ham hock short ribs landjaeger shankle. Bresaola short loin flank venison landjaeger. Filet mignon flank doner tail ham hock."
+      )
+      val counts = Seq(3, 5, 6, 4, 5, 37)
+
+      lines.map(count) == counts
+    }
+
+    printTest(countTest, "count")
+
     es.shutdown()
   }
 
