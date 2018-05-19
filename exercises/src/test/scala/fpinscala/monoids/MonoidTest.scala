@@ -21,6 +21,7 @@ object MonoidTest extends App with SimpleBooleanTest {
     val vec = Vector("a", "b", "c", "d", "e", "f", "g")
     val parFoldMapTest = Par.run(es)(Monoid.parFoldMap(vec, stringMonoid)(identity)) == "abcdefg"
     printTest(parFoldMapTest, "parFoldMap")
+    es.shutdown()
 
     val orderedTest = ordered(Vector(1,2,3,4,5,6,7,8)) && !ordered(Vector(1,2,3,4,5,3))
     printTest(orderedTest, "ordered")
@@ -65,7 +66,25 @@ object MonoidTest extends App with SimpleBooleanTest {
 
     printTest(countTest, "count")
 
-    es.shutdown()
+
+    def foldableTest[A[_]](foldable: Foldable[A], input: A[String], expected: (String, String, Int) = ("|123", "123|", 6)) = {
+      foldable.foldLeft[String, String](input)("|")(_+_) == expected._1 &&
+      foldable.foldRight[String, String](input)("|")(_+_) == expected._2 &&
+      foldable.foldMap[String, Int](input)(_.toInt)(intAddition) == expected._3
+    }
+
+    val listFoldableTest = foldableTest(ListFoldable, List("1", "2", "3"))
+    val indexedSeqFoldableTest = foldableTest(IndexedSeqFoldable, Vector("1", "2", "3"))
+    val streamFoldableTest = foldableTest(StreamFoldable, Stream("1", "2", "3"))
+    val treeFoldableTest = foldableTest(TreeFoldable, Branch(Leaf("1"), Branch(Leaf("2"), Leaf("3"))))
+    val optionFoldableTest = foldableTest(OptionFoldable, Some("123"), ("|123", "123|", 123))
+
+    printTest(listFoldableTest, "ListFoldable")
+    printTest(indexedSeqFoldableTest, "IndexedSeqFoldable")
+    printTest(streamFoldableTest, "StreamFoldable")
+    printTest(treeFoldableTest, "TreeFoldable")
+    printTest(optionFoldableTest, "OptionFoldable")
+
   }
 
   run
