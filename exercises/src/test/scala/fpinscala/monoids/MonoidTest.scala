@@ -85,6 +85,10 @@ object MonoidTest extends App with SimpleBooleanTest {
     printTest(treeFoldableTest, "TreeFoldable")
     printTest(optionFoldableTest, "OptionFoldable")
 
+    val bagTest = bag(Vector("a", "b", "c", "a", "a", "c")) == Map("a" -> 3, "b" -> 1, "c" -> 2) && bag(Vector()) == Map()
+
+    printTest(bagTest, "bag")
+
   }
 
   run
