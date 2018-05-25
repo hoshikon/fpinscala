@@ -1,5 +1,6 @@
 package fpinscala.monads
 
+import com.sun.xml.internal.xsom.impl.scd.Axis.ModelGroupAxis
 import fpinscala.SimpleBooleanTest
 
 object MonadTest extends App with SimpleBooleanTest {
@@ -18,6 +19,9 @@ object MonadTest extends App with SimpleBooleanTest {
 
     val _flatMapTest = Monad.optionMonad._flatMap(Some(1))(n => Some(n*2)) == Some(2)
     printTest(_flatMapTest, "flatMap in terms of compose")
+
+    val joinTest = Monad.optionMonad.join(Some(Some(1))) == Some(1)
+    printTest(joinTest, "join")
   }
 
   run
