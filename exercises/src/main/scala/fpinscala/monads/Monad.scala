@@ -40,12 +40,21 @@ trait Monad[M[_]] extends Functor[M] {
 
   def traverse[A,B](la: List[A])(f: A => M[B]): M[List[B]] = sequence(la.map(f))
 
-  def replicateM[A](n: Int, ma: M[A]): M[List[A]] = ???
+  def replicateM[A](n: Int, ma: M[A]): M[List[A]] =
+    if (n <= 0) unit(List.empty[A])
+    else map2(ma, replicateM(n-1, ma))(_ :: _)
 
-  def compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] = ???
+  def product[A,B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb)((_, _))
+
+  def filterM[A](ms: List[A])(f: A => M[Boolean]): M[List[A]] =
+    ms.foldLeft(unit(List.empty[A]))((mla, a) =>
+      map2(mla, f(a))((la, b) => if (b) la :+ a else la)
+    )
+
+  def compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] = a => flatMap(f(a))(b => g(b))
 
   // Implement in terms of `compose`:
-  def _flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] = ???
+  def _flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] = compose((_:Unit) => ma, f)(())
 
   def join[A](mma: M[M[A]]): M[A] = ???
 

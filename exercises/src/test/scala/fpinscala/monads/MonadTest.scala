@@ -9,6 +9,15 @@ object MonadTest extends App with SimpleBooleanTest {
 
     val traverseTest = Monad.optionMonad.traverse(List(1,2,3))(n => Some(n)) == Some(List(1,2,3))
     printTest(traverseTest, "traverse")
+
+    val replicateMTest = Monad.optionMonad.replicateM(3, Some(1)) == Some(List.fill(3)(1))
+    printTest(replicateMTest, "replicateM")
+
+    val filterMTest = Monad.optionMonad.filterM(List(1,2,3))(n => Some(n%2 == 0)) == Some(List(2))
+    printTest(filterMTest, "filterM")
+
+    val _flatMapTest = Monad.optionMonad._flatMap(Some(1))(n => Some(n*2)) == Some(2)
+    printTest(_flatMapTest, "flatMap in terms of compose")
   }
 
   run
