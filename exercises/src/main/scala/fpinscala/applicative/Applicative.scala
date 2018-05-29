@@ -20,19 +20,28 @@ trait Applicative[F[_]] extends Functor[F] {
   def map[A,B](fa: F[A])(f: A => B): F[B] =
     apply(unit(f))(fa)
 
-  def sequence[A](fas: List[F[A]]): F[List[A]] = ???
+  def sequence[A](fas: List[F[A]]): F[List[A]] = fas.foldLeft(unit(List.empty[A]))(map2(_, _)(_ :+ _))
 
-  def traverse[A,B](as: List[A])(f: A => F[B]): F[List[B]] = ???
+  def traverse[A,B](as: List[A])(f: A => F[B]): F[List[B]] = sequence(as.map(f))
 
-  def replicateM[A](n: Int, fa: F[A]): F[List[A]] = ???
+  def replicateM[A](n: Int, fa: F[A]): F[List[A]] =
+    if (n <= 0) unit(List.empty[A])
+    else map2(fa, replicateM(n-1, fa))(_ :: _)
 
   def factor[A,B](fa: F[A], fb: F[B]): F[(A,B)] = ???
+
+  def product[A,B](fa: F[A], fb: F[B]): F[(A,B)] = map2(fa, fb)((_, _))
 
   def product[G[_]](G: Applicative[G]): Applicative[({type f[x] = (F[x], G[x])})#f] = ???
 
   def compose[G[_]](G: Applicative[G]): Applicative[({type f[x] = F[G[x]]})#f] = ???
 
   def sequenceMap[K,V](ofa: Map[K,F[V]]): F[Map[K,V]] = ???
+
+  def filterM[A](ms: List[A])(f: A => F[Boolean]): F[List[A]] =
+    ms.foldLeft(unit(List.empty[A]))((mla, a) =>
+      map2(mla, f(a))((la, b) => if (b) la :+ a else la)
+    )
 }
 
 case class Tree[+A](head: A, tail: List[Tree[A]])

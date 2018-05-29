@@ -1,6 +1,5 @@
 package fpinscala.monads
 
-import com.sun.xml.internal.xsom.impl.scd.Axis.ModelGroupAxis
 import fpinscala.SimpleBooleanTest
 
 object MonadTest extends App with SimpleBooleanTest {
