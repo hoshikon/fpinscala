@@ -129,6 +129,28 @@ object Applicative {
       def unit[A](a: => A): M = M.zero
       override def apply[A,B](m1: M)(m2: M): M = M.op(m1, m2)
     }
+
+  import fpinscala.testing.{Prop, Gen}
+  import Prop.forAll
+
+  def applicativeLaws[FA[_], A, B](ap: Applicative[FA], genFaa: Gen[FA[A]], genAToB: Gen[A => B]): Prop = {
+    val identityLaw = forAll(genFaa) { fa =>
+      ap.map2[Unit, A, A](ap.unit(()), fa)((_,a) => a) == ap.unit(fa) &&
+      ap.map2[A, Unit, A](fa, ap.unit(()))((a,_) => a) == ap.unit(fa)
+    }
+
+    def assoc[C,D,E](p: (C,(D,E))): ((C,D), E) = p match { case (a, (b, c)) => ((a,b), c) }
+    val associativeLaw = forAll(Gen.listOfN(3, genFaa)) { case List(fa, fb, fc) =>
+      ap.product(ap.product(fa, fb), fc) == ap.map(ap.product(fa, ap.product(fb,fc)))(assoc)
+    }
+
+    def productF[I,O,I2,O2](f: I => O, g: I2 => O2): (I,I2) => (O,O2) = (i,i2) => (f(i), g(i2))
+    val naturalityLaw = forAll(Gen.listOfN(2, genFaa).map2(Gen.listOfN(2, genAToB))((_, _))) { case (List(fa, fb), List(f, g)) =>
+      ap.map2(fa, fb)(productF(f,g)) == ap.product(ap.map(fa)(f), ap.map(fb)(g))
+    }
+
+    identityLaw && associativeLaw && naturalityLaw
+  }
 }
 
 trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
