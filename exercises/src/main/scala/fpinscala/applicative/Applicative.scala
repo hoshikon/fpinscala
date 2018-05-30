@@ -11,7 +11,7 @@ import language.implicitConversions
 
 trait Applicative[F[_]] extends Functor[F] {
 
-  def map2[A,B,C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = ???
+  def map2[A,B,C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = map2WithApply(fa, fb)(f)
 
   def map2WithApply[A,B,C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] =
     apply(map(fa)(f.curried))(fb)
@@ -108,7 +108,19 @@ object Applicative {
       a zip b map f.tupled
   }
 
-  def validationApplicative[E]: Applicative[({type f[x] = Validation[E,x]})#f] = ???
+  def validationApplicative[E]: Applicative[({type f[x] = Validation[E,x]})#f] =
+    new Applicative[({type f[x] = Validation[E,x]})#f] {
+      override def unit[A](a: => A): Validation[E, A] = Success(a)
+
+      override def apply[A, B](fab: Validation[E, A => B])(fa: Validation[E, A]): Validation[E, B] = {
+        (fab, fa) match {
+          case (Success(ab), Success(a)) => Success(ab(a))
+          case (Failure(h, t), Success(_)) => Failure(h, t)
+          case (Success(_), Failure(h, t)) => Failure(h, t)
+          case (Failure(h1, t1), Failure(h2, t2)) => Failure(h2, t2 ++ (h1 +: t1))
+        }
+      }
+    }
 
   type Const[A, B] = A
 

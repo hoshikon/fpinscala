@@ -1,7 +1,7 @@
 package fpinscala.applicative
 
 import fpinscala.SimpleBooleanTest
-import fpinscala.applicative.Applicative.streamApplicative
+import fpinscala.applicative.Applicative._
 
 object ApplicativeTest extends App with SimpleBooleanTest {
   override def run: Unit = {
@@ -11,6 +11,15 @@ object ApplicativeTest extends App with SimpleBooleanTest {
     val streamApplicativeSequenceTest = streamOfList.take(100).forall(_ == List(1,2,3))
 
     printTest(streamApplicativeSequenceTest, "streamApplicative sequence")
+
+    val validationApplicativeTest =
+      validationApplicative.map4[Int, Int, Int, Int, Int](
+        Failure("fail1", Vector.empty),
+        Success(1),
+        Failure("fail2", Vector.empty),
+        Failure("fail3", Vector.empty)
+      )(_+_+_+_) == Failure("fail3", Vector("fail2", "fail1"))
+    printTest(validationApplicativeTest, "validation applicative")
   }
 
   run
