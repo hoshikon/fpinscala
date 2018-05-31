@@ -10,6 +10,7 @@ import language.higherKinds
 import language.implicitConversions
 
 trait Applicative[F[_]] extends Functor[F] {
+  self =>
 
   def map2[A,B,C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = map2WithApply(fa, fb)(f)
 
@@ -43,9 +44,19 @@ trait Applicative[F[_]] extends Functor[F] {
     apply(apply(apply(map(fa)(f.curried))(fb))(fc))(fd)
 
 
-  def product[G[_]](G: Applicative[G]): Applicative[({type f[x] = (F[x], G[x])})#f] = ???
+  def product[G[_]](G: Applicative[G]): Applicative[({type f[x] = (F[x], G[x])})#f] =
+    new Applicative[({type f[x] = (F[x], G[x])})#f] {
+      override def unit[A](a: => A): (F[A], G[A]) = (self.unit(a), G.unit(a))
+      override def apply[A, B](fabgab: (F[A => B], G[A => B]))(faga: (F[A], G[A])): (F[B], G[B]) =
+        (self.apply(fabgab._1)(faga._1), G.apply(fabgab._2)(faga._2))
+    }
 
-  def compose[G[_]](G: Applicative[G]): Applicative[({type f[x] = F[G[x]]})#f] = ???
+  def compose[G[_]](G: Applicative[G]): Applicative[({type f[x] = F[G[x]]})#f] =
+    new Applicative[({type f[x] = F[G[x]]})#f] {
+      override def unit[A](a: => A): F[G[A]] = self.unit(G.unit(a))
+      override def apply[A, B](fgab: F[G[A => B]])(fga: F[G[A]]): F[G[B]] =
+        self.map2(fgab, fga)(G.apply(_)(_))
+    }
 
   def sequenceMap[K,V](ofa: Map[K,F[V]]): F[Map[K,V]] = ???
 
@@ -134,6 +145,7 @@ object Applicative {
   import Prop.forAll
 
   def applicativeLaws[FA[_], A, B](ap: Applicative[FA], genFaa: Gen[FA[A]], genAToB: Gen[A => B]): Prop = {
+
     val identityLaw = forAll(genFaa) { fa =>
       ap.map2[Unit, A, A](ap.unit(()), fa)((_,a) => a) == ap.unit(fa) &&
       ap.map2[A, Unit, A](fa, ap.unit(()))((a,_) => a) == ap.unit(fa)
