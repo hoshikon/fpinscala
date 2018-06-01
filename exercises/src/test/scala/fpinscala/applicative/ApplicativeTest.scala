@@ -20,6 +20,9 @@ object ApplicativeTest extends App with SimpleBooleanTest {
         Failure("fail3", Vector.empty)
       )(_+_+_+_) == Failure("fail3", Vector("fail2", "fail1"))
     printTest(validationApplicativeTest, "validation applicative")
+
+    val sequenceMapTest = validationApplicative.sequenceMap(Map(1 -> Success("one"), 2 -> Success("two"), 3 -> Success("three"))) == Success(Map(1 -> "one", 2 -> "two", 3 -> "three"))
+    printTest(sequenceMapTest, "sequenceMap")
   }
 
   run

@@ -58,7 +58,10 @@ trait Applicative[F[_]] extends Functor[F] {
         self.map2(fgab, fga)(G.apply(_)(_))
     }
 
-  def sequenceMap[K,V](ofa: Map[K,F[V]]): F[Map[K,V]] = ???
+  def sequenceMap[K,V](ofa: Map[K,F[V]]): F[Map[K,V]] =
+    ofa.foldLeft(unit(Map.empty[K,V]))((acc, kfv) =>
+      map2(acc, kfv._2)(_.updated(kfv._1, _))
+    )
 
   def filterM[A](ms: List[A])(f: A => F[Boolean]): F[List[A]] =
     ms.foldLeft(unit(List.empty[A]))((mla, a) =>
