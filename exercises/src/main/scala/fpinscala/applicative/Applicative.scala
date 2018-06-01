@@ -69,6 +69,7 @@ trait Applicative[F[_]] extends Functor[F] {
 case class Tree[+A](head: A, tail: List[Tree[A]])
 
 trait Monad[F[_]] extends Applicative[F] {
+  self =>
   def flatMap[A,B](ma: F[A])(f: A => F[B]): F[B] = join(map(ma)(f))
 
   def join[A](mma: F[F[A]]): F[A] = flatMap(mma)(ma => ma)
@@ -78,6 +79,16 @@ trait Monad[F[_]] extends Applicative[F] {
 
   override def apply[A,B](mf: F[A => B])(ma: F[A]): F[B] =
     flatMap(mf)(f => map(ma)(a => f(a)))
+
+//  ***impossible to implement***
+//  def compose[G[_]](G: Monad[G]): Monad[({type f[x] = F[G[x]]})#f] = new Monad[({type f[x] = F[G[x]]})#f] {
+//    override def unit[A](a: => A): F[G[A]] = self.unit(G.unit(a))
+//    override def flatMap[A, B](ma: F[G[A]])(f: A => F[G[B]]): F[G[B]] = {
+//      self.map(ma)((ga: G[A]) => {
+//        G.flatMap(ga)(a => self.pure(f(a)))
+//      })
+//    }
+//  }
 }
 
 object Monad {
