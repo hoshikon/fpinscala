@@ -185,7 +185,18 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
   def sequence[G[_]:Applicative,A](fma: F[G[A]]): G[F[A]] =
     traverse(fma)(ma => ma)
 
-  def map[A,B](fa: F[A])(f: A => B): F[B] = ???
+//  def map[A,B](fa: F[A])(f: A => B): F[B] =
+//    traverse[({type f[x] = Either[Nothing, x]})#f, A, B](fa)(a => Right(f(a)))(Monad.eitherMonad).right.get
+
+  type Id[A] = A
+
+  val idMonad: Monad[Id] = new Monad[Id] {
+    def unit[A](a: => A) = a
+    override def flatMap[A,B](a: A)(f: A => B): B = f(a)
+  }
+
+  def map[A,B](fa: F[A])(f: A => B): F[B] =
+    traverse[Id, A, B](fa)(f)(idMonad)
 
   import Applicative._
 
@@ -235,7 +246,7 @@ object Traverse {
 
   val treeTraverse = new Traverse[Tree] {
     override def traverse[G[_], A, B](fa: Tree[A])(f: A => G[B])(implicit G: Applicative[G]): G[Tree[B]] =
-      G.map2(f(fa.head), listTraverse.traverse(fa.tail)(traverse(_)(f)(G)))(Tree(_, _))
+      G.map2(f(fa.head), listTraverse.traverse(fa.tail)(traverse(_)(f)))(Tree(_, _))
   }
 }
 
