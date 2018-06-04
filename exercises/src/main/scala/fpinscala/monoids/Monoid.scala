@@ -170,13 +170,17 @@ trait Foldable[F[_]] {
   import Monoid._
 
   def foldRight[A, B](as: F[A])(z: B)(f: (A, B) => B): B =
-    ???
+    foldMap(as)(f.curried)(endoMonoid)(z)
 
   def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B =
-    ???
+    foldMap(as)(a => (b: B) => f(b, a))(new Monoid[B => B] {
+      val endo: Monoid[B => B] = endoMonoid[B]
+      def op(x: B => B, y: B => B): B => B  = endo.op(y, x)
+      val zero: B => B = endo.zero
+    })(z)
 
   def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
-    ???
+    foldRight(as)(mb.zero)((a, b) => mb.op(f(a), b))
 
   def concatenate[A](as: F[A])(m: Monoid[A]): A = foldLeft(as)(m.zero)(m.op)
 
