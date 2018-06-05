@@ -80,6 +80,9 @@ trait Monad[F[_]] extends Applicative[F] {
   def compose[A,B,C](f: A => F[B], g: B => F[C]): A => F[C] =
     a => flatMap(f(a))(g)
 
+  override def map[A, B](ma: F[A])(f: A => B): F[B] =
+    flatMap[A,B](ma)((a: A) => unit(f(a)))
+
   override def apply[A,B](mf: F[A => B])(ma: F[A]): F[B] =
     flatMap(mf)(f => map(ma)(a => f(a)))
 
@@ -113,6 +116,22 @@ object Monad {
     override def unit[A](a: => A): F[N[A]] = F.unit(N.unit(a))
     override def flatMap[A, B](fna: F[N[A]])(f: A => F[N[B]]): F[N[B]] =
       F.flatMap(fna)(na => F.map(T.traverse(na)(f))(N.join))
+  }
+
+  val listMonad: Monad[List] = new Monad[List] {
+    override def unit[A](a: => A): List[A] = List(a)
+    override def flatMap[A, B](l: List[A])(f: A => List[B]): List[B] = l match {
+      case h :: t => f(h) ::: flatMap(t)(f)
+      case _ => List.empty
+    }
+  }
+
+  val optionMonad: Monad[Option] = new Monad[Option] {
+    override def unit[A](a: => A): Option[A] = Some(a)
+    override def flatMap[A, B](oa: Option[A])(f: A => Option[B]): Option[B] = oa match {
+      case Some(a) => f(a)
+      case _ => None
+    }
   }
 }
 
