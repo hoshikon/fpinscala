@@ -388,11 +388,22 @@ object IO3 {
   }
 
   // Exercise 3: Implement a `Free` interpreter which works for any `Monad`
-  def run[F[_],A](a: Free[F,A])(implicit F: Monad[F]): F[A] = ???
+  def run[F[_],A](a: Free[F,A])(implicit F: Monad[F]): F[A] = step(a) match {
+    case Return(a) => F.unit(a)
+    case Suspend(s) => s
+    case FlatMap(s, f) => s match {
+      case Suspend(s) => F.flatMap(s)(a => run(f(a))(F))
+      case _ => sys.error("Impossible, since `step` eliminates these cases")
+    }
+  }
 
   // return either a `Suspend`, a `Return`, or a right-associated `FlatMap`
-  // @annotation.tailrec
-  def step[F[_],A](a: Free[F,A]): Free[F,A] = ???
+   @annotation.tailrec
+  def step[F[_],A](a: Free[F,A]): Free[F,A] = a match {
+    case FlatMap(Return(a), f) => step(f(a))
+    case FlatMap(FlatMap(s, f1), f2) => step(s.flatMap(a => f1(a).flatMap(f2)))
+    case _ => a
+  }
 
   /*
   The type constructor `F` lets us control the set of external requests our
