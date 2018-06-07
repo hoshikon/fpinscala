@@ -3,6 +3,7 @@ package fpinscala
 import fpinscala.datastructures.{ListTest, TreeTest}
 import fpinscala.errorhandling.{EitherTest, OptionTest}
 import fpinscala.gettingstarted.GettingStartedTest
+import fpinscala.iomonad.IOTest
 import fpinscala.laziness.StreamTest
 import fpinscala.monads.MonadTest
 import fpinscala.monoids.MonoidTest
@@ -25,7 +26,8 @@ object TestAll extends App {
     GenTest,
     ParsersTest,
     MonoidTest,
-    MonadTest
+    MonadTest,
+    IOTest
   )
 
   tests.foreach(t => {
