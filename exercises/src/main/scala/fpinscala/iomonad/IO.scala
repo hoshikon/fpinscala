@@ -449,11 +449,8 @@ object IO3 {
   object Console {
     type ConsoleIO[A] = Free[Console, A]
 
-    def readLn: ConsoleIO[Option[String]] =
-      Suspend(ReadLine)
-
-    def printLn(line: String): ConsoleIO[Unit] =
-      Suspend(PrintLine(line))
+    def readLn: ConsoleIO[Option[String]] = Suspend(ReadLine)
+    def printLn(line: String): ConsoleIO[Unit] = Suspend(PrintLine(line))
   }
 
   /*
@@ -510,9 +507,18 @@ object IO3 {
   // Exercise 4 (optional, hard): Implement `runConsole` using `runFree`,
   // without going through `Par`. Hint: define `translate` using `runFree`.
 
-  def translate[F[_],G[_],A](f: Free[F,A])(fg: F ~> G): Free[G,A] = ???
+  def translate[F[_],G[_],A](f: Free[F,A])(fg: F ~> G): Free[G,A] = {
+    type FreeG[B] = Free[G,B]
+    val t = new (F ~> FreeG) {
+      def apply[C](a: F[C]): Free[G,C] = Suspend { fg(a) }
+    }
+    runFree(f)(t)(freeMonad[G])
+  }
 
-  def runConsole[A](a: Free[Console,A]): A = ???
+  def runConsole[A](a: Free[Console,A]): A =
+    runTrampoline { translate(a)(new (Console ~> Function0) {
+      def apply[B](c: Console[B]) = c.toThunk
+    })}
 
   /*
   There is nothing about `Free[Console,A]` that requires we interpret
