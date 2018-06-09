@@ -1,5 +1,7 @@
 package fpinscala.iomonad
 
+import fpinscala.iomonad
+
 import language.postfixOps
 import language.higherKinds
 import scala.io.StdIn.readLine
@@ -515,10 +517,7 @@ object IO3 {
     runFree(f)(t)(freeMonad[G])
   }
 
-  def runConsole[A](a: Free[Console,A]): A =
-    runTrampoline { translate(a)(new (Console ~> Function0) {
-      def apply[B](c: Console[B]) = c.toThunk
-    })}
+  def runConsole[A](a: Free[Console,A]): A = runTrampoline(translate(a)(consoleToFunction0))
 
   /*
   There is nothing about `Free[Console,A]` that requires we interpret
