@@ -5,6 +5,7 @@ import fpinscala.errorhandling.{EitherTest, OptionTest}
 import fpinscala.gettingstarted.GettingStartedTest
 import fpinscala.iomonad.IOTest
 import fpinscala.laziness.StreamTest
+import fpinscala.localeffects.LocalEffectTest
 import fpinscala.monads.MonadTest
 import fpinscala.monoids.MonoidTest
 import fpinscala.parallelism.{NonblockingTest, ParTest}
@@ -27,7 +28,8 @@ object TestAll extends App {
     ParsersTest,
     MonoidTest,
     MonadTest,
-    IOTest
+    IOTest,
+    LocalEffectTest
   )
 
   tests.foreach(t => {
