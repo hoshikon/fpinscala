@@ -165,3 +165,41 @@ object Immutable {
 
 import scala.collection.mutable.HashMap
 
+//function names are different from the answer
+sealed abstract class STMap[S,A,B] {
+  protected def value: HashMap[A,B]
+  def size: ST[S,Int] = ST(value.size)
+
+  def write(k: A, v: B): ST[S,Unit] = ST(value.update(k,v))
+
+  def read(k: A): ST[S,B] = ST(value(k))
+  def readOption(k: A): ST[S,Option[B]] = ST(value.get(k))
+
+  def remove(k: A): ST[S, Unit] =  ST(value.remove(k))
+
+  def freeze: ST[S,Map[A,B]] = ST(value.toMap)
+
+  def fill(xs: Map[A,B]): ST[S,Unit] = xs.foldLeft(ST[S,Unit](())){
+    case (st, (k, v)) => st.flatMap(_ => write(k, v))
+  }
+
+  def swap(k1: A, k2: A): ST[S,Unit] = for {
+    x <- read(k1)
+    y <- read(k2)
+    _ <- write(k1, y)
+    _ <- write(k2, x)
+  } yield ()
+}
+
+object STMap {
+  def apply[S,A,B](elems: (A,B)*): ST[S, STMap[S,A,B]] =
+    ST(new STMap[S,A,B] {
+      lazy val value = HashMap(elems: _*)
+    })
+
+  def fromMap[S,A,B](xs: Map[A,B]): ST[S, STMap[S,A,B]] =
+    ST(new STMap[S,A,B] {
+      lazy val value = HashMap(xs.toSeq: _*)
+    })
+}
+
