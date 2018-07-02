@@ -16,6 +16,9 @@ object StreamingIOTest extends App with SimpleBooleanTest {
 
     val dropWhileTest = Process.dropWhile[Int](_%2 == 0)(Stream(2,4,6,7,8,9)).toList == List(7,8,9)
     printTest(dropWhileTest, "dropWhile")
+
+    val countTest = Process.count(Stream(1,1,1,1,1,1,1)).toList == List(1,2,3,4,5,6,7)
+    printTest(countTest, "count")
   }
   run
 }
