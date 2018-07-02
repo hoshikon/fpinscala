@@ -319,23 +319,25 @@ object SimpleStreamTransducers {
      * Exercise 2: Implement `count`.
      */
     def count[I]: Process[I,Int] = {
-      def go(acc: Int): Process[I,Int] = {
-        await[I, Int](_ => emit(acc+1, go(acc+1)))
-      }
+      def go(acc: Int): Process[I,Int] = await[I, Int](_ => emit(acc+1, go(acc+1)))
       go(0)
     }
 
     /* For comparison, here is an explicit recursive implementation. */
     def count2[I]: Process[I,Int] = {
-      def go(n: Int): Process[I,Int] =
-        await((i: I) => emit(n+1, go(n+1)))
+      def go(n: Int): Process[I,Int] = await((i: I) => emit(n+1, go(n+1)))
       go(0)
     }
 
     /*
      * Exercise 3: Implement `mean`.
      */
-    def mean: Process[Double,Double] = ???
+    def mean: Process[Double,Double] = {
+      def go(count: Int, acc: Double): Process[Double,Double] = {
+        await(d => emit((acc+d)/(count+1), go(count+1, acc+d)))
+      }
+      go(0,0.0)
+    }
 
     def loop[S,I,O](z: S)(f: (I,S) => (O,S)): Process[I,O] =
       await((i: I) => f(i,z) match {

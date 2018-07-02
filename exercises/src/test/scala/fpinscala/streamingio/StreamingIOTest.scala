@@ -19,6 +19,9 @@ object StreamingIOTest extends App with SimpleBooleanTest {
 
     val countTest = Process.count(Stream(1,1,1,1,1,1,1)).toList == List(1,2,3,4,5,6,7)
     printTest(countTest, "count")
+
+    val meanTest = Process.mean(Stream(2.0,4.0,6.0,8.0)).toList == List(2.0,3.0,4.0,5.0)
+    printTest(meanTest, "mean")
   }
   run
 }
