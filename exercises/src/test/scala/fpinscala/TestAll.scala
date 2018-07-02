@@ -11,6 +11,7 @@ import fpinscala.monoids.MonoidTest
 import fpinscala.parallelism.{NonblockingTest, ParTest}
 import fpinscala.parsing.ParsersTest
 import fpinscala.state.StateTest
+import fpinscala.streamingio.StreamingIOTest
 import fpinscala.testing.GenTest
 
 object TestAll extends App {
@@ -29,7 +30,8 @@ object TestAll extends App {
     MonoidTest,
     MonadTest,
     IOTest,
-    LocalEffectTest
+    LocalEffectTest,
+    StreamingIOTest
   )
 
   tests.foreach(t => {
