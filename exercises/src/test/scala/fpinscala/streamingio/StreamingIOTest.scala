@@ -28,6 +28,15 @@ object StreamingIOTest extends App with SimpleBooleanTest {
 
     val count3Test = Process.count(Stream(1,1,1,1,1,1,1)).toList == List(1,2,3,4,5,6,7)
     printTest(count3Test, "count with loop")
+
+    val composeTest1 = (Process.sum |> Process.sum)(Stream(1,2,3,4,5,6,7,8)).toList == List(1,4,10,20,35,56,84,120)
+    printTest(composeTest1, "sum |> sum")
+
+    val composeTest2 = (Process.filter[Double](_%2 == 0) |> Process.sum)(Stream(1,2,3,4,5,6,7,8)).toList == List(2,6,12,20)
+    printTest(composeTest2, "filter |> sum")
+
+    val composeTest3 = (Process.sum |> Process.filter(_.toInt%2 == 0))(Stream(1,2,3,4,5,6,7,8)).toList == List(6,10,28,36)
+    printTest(composeTest3, "sum |> filter")
   }
   run
 }
