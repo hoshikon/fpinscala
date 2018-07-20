@@ -46,6 +46,9 @@ object StreamingIOTest extends App with SimpleBooleanTest {
 
     val mean2Test = Process.mean2(Stream(2.0,4.0,6.0,8.0)).toList == List(2.0,3.0,4.0,5.0)
     printTest(meanTest, "mean with zip")
+
+    val existsTest = Process.my_exists[Int](_%2==0)(Stream(1,3,5,7,9,10)).toList == List(false, false, false, false, false, true)
+    printTest(existsTest, "exists")
   }
   run
 }
