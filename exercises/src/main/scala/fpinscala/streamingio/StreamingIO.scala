@@ -399,6 +399,8 @@ object SimpleStreamTransducers {
      * `count`?
      */
 
+    def mean2: Process[Double,Double] = sum.zip(count) |> lift { case (s,c) => s/c }
+
     def feed[A,B](oa: Option[A])(p: Process[A,B]): Process[A,B] =
       p match {
         case Halt() => p

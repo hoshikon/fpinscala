@@ -43,6 +43,9 @@ object StreamingIOTest extends App with SimpleBooleanTest {
 
     val zipTest = Process.lift[Double,Double](identity).zip(Process.sum)(Stream(1,2,3,4,5)).toList == List((1,1), (2,3), (3,6), (4,10), (5,15))
     printTest(zipTest, "zip")
+
+    val mean2Test = Process.mean2(Stream(2.0,4.0,6.0,8.0)).toList == List(2.0,3.0,4.0,5.0)
+    printTest(meanTest, "mean with zip")
   }
   run
 }
