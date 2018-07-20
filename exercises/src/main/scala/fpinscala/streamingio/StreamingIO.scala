@@ -225,7 +225,25 @@ object SimpleStreamTransducers {
     /*
      * Exercise 6: Implement `zipWithIndex`.
      */
-    def zipWithIndex: Process[I,(O,Int)] = ???
+    def zipWithIndex: Process[I,(O,Int)] = this.zip(count.map(_ - 1))
+
+    def zip[O2](that: Process[I,O2]): Process[I, (O,O2)] = {
+      def feed[A,B](i: A, p: Process[A,B]): Process[A, B] = {
+        p match {
+          case Emit(h,t) => Emit(h, feed(i, t))
+          case Await(recv) => recv(Some(i))
+          case Halt() => Halt()
+        }
+      }
+      (this, that) match {
+        case (Halt(), _) => Halt()
+        case (_, Halt()) => Halt()
+        case (Await(recv1), Await(recv2)) => await { i => recv1(Some(i)).zip(recv2(Some(i))) }
+        case (Await(recv1), Emit(h2,t2)) => await { i => recv1(Some(i)).zip(Emit(h2, feed(i, t2))) }
+        case (Emit(h1,t1), Await(recv2)) => await { i => Emit(h1, feed(i, t1)).zip(recv2(Some(i))) }
+        case (Emit(h1, t1), Emit(h2, t2)) => Emit((h1, h2), t1.zip(t2))
+      }
+    }
 
     /* Add `p` to the fallback branch of this process */
     def orElse(p: Process[I,O]): Process[I,O] = this match {

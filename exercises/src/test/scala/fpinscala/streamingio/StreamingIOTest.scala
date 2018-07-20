@@ -37,6 +37,12 @@ object StreamingIOTest extends App with SimpleBooleanTest {
 
     val composeTest3 = (Process.sum |> Process.filter(_.toInt%2 == 0))(Stream(1,2,3,4,5,6,7,8)).toList == List(6,10,28,36)
     printTest(composeTest3, "sum |> filter")
+
+    val zipWithIndexTest = Process.lift[Int,Int](identity).zipWithIndex(Stream(0,1,2,3,4)).toList == List((0,0), (1,1), (2,2), (3,3), (4,4))
+    printTest(zipWithIndexTest, "zipWithIndex")
+
+    val zipTest = Process.lift[Double,Double](identity).zip(Process.sum)(Stream(1,2,3,4,5)).toList == List((1,1), (2,3), (3,6), (4,10), (5,15))
+    printTest(zipTest, "zip")
   }
   run
 }
