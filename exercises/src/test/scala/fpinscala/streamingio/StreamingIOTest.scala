@@ -1,6 +1,10 @@
 package fpinscala.streamingio
 
+import java.util.concurrent.{ExecutorService, Executors}
+import java.io.File
+
 import fpinscala.SimpleBooleanTest
+import fpinscala.iomonad.unsafePerformIO
 import fpinscala.streamingio.SimpleStreamTransducers.Process
 
 object StreamingIOTest extends App with SimpleBooleanTest {
@@ -49,6 +53,29 @@ object StreamingIOTest extends App with SimpleBooleanTest {
 
     val existsTest = Process.my_exists[Int](_%2==0)(Stream(1,3,5,7,9,10)).toList == List(false, false, false, false, false, true)
     printTest(existsTest, "exists")
+
+    val path = "./exercises/src/test/resources"
+    val (from, to) = (s"$path/read-from.txt", s"$path/write-to.txt")
+    val pool: ExecutorService = Executors.newCachedThreadPool()
+    unsafePerformIO(
+      Process.fromFahrenheitFileToCelsiusFile(
+        new File(from),
+        new File(to)
+      ))(pool)
+
+    val fileReadWriteTest = {
+      val result = unsafePerformIO(
+        Process.processFile(new File(to), Process.lift(identity), "")((acc, str) => acc + str + "\n")
+      )(pool)
+      val expected = Seq(100.0, 120.0, 72.4, 151.51, 48.0, 163.12)
+        .map(Process.toCelsius(_).toString)
+        .mkString("\n") + "\n"
+
+      result == expected
+    }
+    printTest(fileReadWriteTest, "read fahrenheit, convert to celsius, and write to file")
+
+    pool.shutdown()
   }
   run
 }

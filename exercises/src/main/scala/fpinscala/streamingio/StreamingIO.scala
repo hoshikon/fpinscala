@@ -457,6 +457,32 @@ object SimpleStreamTransducers {
      * converts each temperature to celsius, and writes results to another file.
      */
 
+    def fromFahrenheitFileToCelsiusFile(from: java.io.File, to: java.io.File): IO[Unit] = IO {
+      import java.io.PrintWriter
+      val p = filter[String](str => str.trim.nonEmpty && !str.trim.startsWith("#")) |> lift(str => toCelsius(str.toDouble).toString)
+      val writer = new PrintWriter(to)
+
+      @annotation.tailrec
+      def go(ss: Iterator[String], cur: Process[String, String]): Unit =
+        cur match {
+          case Halt() => ()
+          case Await(recv) =>
+            val next = if (ss.hasNext) recv(Some(ss.next))
+            else recv(None)
+            go(ss, next)
+          case Emit(h, t) => {
+            writer.println(h)
+            go(ss, t)
+          }
+        }
+      val s = io.Source.fromFile(from)
+      try go(s.getLines, p)
+      finally {
+        s.close
+        writer.close()
+      }
+    }
+
     def toCelsius(fahrenheit: Double): Double =
       (5.0 / 9.0) * (fahrenheit - 32.0)
   }
